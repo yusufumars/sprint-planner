@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { calcWorkingDays, snapToFibonacci } from '../lib/utils'
+import { calcWorkingDays } from '../lib/utils'
 import SprintSelector from '../components/SprintSelector'
 import CapacityCard from '../components/CapacityCard'
 import TeamCapacityTable from '../components/TeamCapacityTable'
@@ -14,8 +14,8 @@ function getMemberCapacity(basePoints, sprintWorkingDays, focusFactor, individua
   const safeDays = Math.max(sprintWorkingDays, 1)
   const alloc = (allocationPct || 100) / 100
   const rawAdjusted = Math.max(0, basePoints * ((safeDays - totalLeaveDays) / safeDays) * alloc)
-  const adjustedSP = snapToFibonacci(rawAdjusted)
-  const targetSP = snapToFibonacci(adjustedSP * focusFactor / 100)
+  const adjustedSP = Math.round(rawAdjusted)
+  const targetSP = Math.round(adjustedSP * focusFactor / 100)
   const utilizationPct = adjustedSP > 0 ? Math.round((assignedSP / adjustedSP) * 100) : 0
 
   let status
@@ -138,17 +138,16 @@ export default function Dashboard() {
   }
 
   async function handleAssignedBlur(memberId, rawValue) {
-    const snapped = rawValue > 0 ? snapToFibonacci(rawValue) : 0
-    // Update display to snapped value
-    handleAssignedChange(memberId, snapped)
+    const value = Math.round(rawValue) || 0
+    handleAssignedChange(memberId, value)
     const existing = sprintAvailability[memberId]
     if (existing?.id) {
-      await supabase.from('sprint_availability').update({ assigned_points: snapped }).eq('id', existing.id)
+      await supabase.from('sprint_availability').update({ assigned_points: value }).eq('id', existing.id)
     } else {
       const { data } = await supabase.from('sprint_availability').insert({
         sprint_id: activeSprint.id,
         member_id: memberId,
-        assigned_points: snapped,
+        assigned_points: value,
         availability_percentage: 100,
         leave_days: 0,
       }).select().single()
@@ -221,7 +220,7 @@ export default function Dashboard() {
 
   const totalBaseCapacity = Math.round(members.length * basePoints)
   const totalAdjustedSP = members.reduce((sum, m) => sum + (memberCapacities[m.id]?.adjustedSP || 0), 0)
-  const effectiveCapacity = snapToFibonacci(totalAdjustedSP * focusFactor / 100)
+  const effectiveCapacity = Math.round(totalAdjustedSP * focusFactor / 100)
   const totalAssigned = members.reduce((sum, m) => sum + (assignedPoints[m.id] || 0), 0)
   const remainingCapacity = Math.round(effectiveCapacity - totalAssigned)
   const avgAllocation = members.length > 0

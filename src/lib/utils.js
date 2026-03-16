@@ -1,21 +1,3 @@
-const FIBONACCI = [1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987]
-
-/**
- * Round a story-point value to the nearest Fibonacci number.
- * Returns 0 for values <= 0.
- */
-export function snapToFibonacci(n) {
-  const rounded = Math.round(n)
-  if (rounded <= 0) return 0
-  let nearest = FIBONACCI[0]
-  let minDiff = Math.abs(rounded - FIBONACCI[0])
-  for (const fib of FIBONACCI) {
-    const diff = Math.abs(rounded - fib)
-    if (diff < minDiff) { minDiff = diff; nearest = fib }
-  }
-  return nearest
-}
-
 /**
  * Count working days (Mon–Fri) between two ISO date strings, inclusive.
  * Returns 0 if either date is missing or start > end.
