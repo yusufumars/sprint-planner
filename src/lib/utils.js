@@ -16,3 +16,18 @@ export function calcWorkingDays(startDate, endDate) {
   }
   return count
 }
+
+/**
+ * Count working days that a leave/holiday period overlaps with a sprint.
+ * Clips the leave range to [sprintStart, sprintEnd] before counting.
+ * Returns 0 if either range is missing or there is no overlap.
+ * All arguments are ISO date strings (YYYY-MM-DD).
+ */
+export function calcOverlapDays(leaveStart, leaveEnd, sprintStart, sprintEnd) {
+  if (!leaveStart || !leaveEnd || !sprintStart || !sprintEnd) return 0
+  // ISO date strings sort lexicographically correctly — string max/min is safe
+  const overlapStart = leaveStart > sprintStart ? leaveStart : sprintStart
+  const overlapEnd   = leaveEnd   < sprintEnd   ? leaveEnd   : sprintEnd
+  if (overlapStart > overlapEnd) return 0
+  return calcWorkingDays(overlapStart, overlapEnd)
+}

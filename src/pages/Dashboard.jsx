@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { calcWorkingDays } from '../lib/utils'
+import { calcWorkingDays, calcOverlapDays } from '../lib/utils'
 import SprintSelector from '../components/SprintSelector'
 import CapacityCard from '../components/CapacityCard'
 import TeamCapacityTable from '../components/TeamCapacityTable'
@@ -154,7 +154,7 @@ export default function Dashboard() {
       if (data) {
         setSprintAvailability((prev) => ({
           ...prev,
-          [memberId]: { id: data.id, assigned_points: snapped },
+          [memberId]: { id: data.id, assigned_points: value },
         }))
       }
     }
@@ -199,7 +199,13 @@ export default function Dashboard() {
 
   const basePoints = activeSprint?.story_points_per_member || 0
   const focusFactor = activeSprint?.focus_factor || 80
-  const publicHolidayDays = publicHolidays.reduce((sum, h) => sum + (h.working_days || 0), 0)
+  // Overlap-clipped public holiday days (only days that fall inside this sprint)
+  const sprintStart = activeSprint?.start_date || null
+  const sprintEnd   = activeSprint?.end_date   || null
+  const publicHolidayDays = publicHolidays.reduce(
+    (sum, h) => sum + calcOverlapDays(h.start_date, h.end_date, sprintStart, sprintEnd),
+    0
+  )
 
   const assignedPoints = Object.fromEntries(
     Object.entries(sprintAvailability).map(([mid, av]) => [mid, av.assigned_points || 0])
@@ -207,9 +213,10 @@ export default function Dashboard() {
 
   const memberCapacities = {}
   members.forEach((m) => {
+    // Overlap-clipped individual leave days for this member in this sprint
     const individualLeaveDays = leaveEntries
       .filter((l) => l.member_id === m.id)
-      .reduce((sum, l) => sum + (l.working_days || 0), 0)
+      .reduce((sum, l) => sum + calcOverlapDays(l.start_date, l.end_date, sprintStart, sprintEnd), 0)
     memberCapacities[m.id] = getMemberCapacity(
       basePoints, sprintWorkingDays, focusFactor,
       individualLeaveDays, publicHolidayDays,
