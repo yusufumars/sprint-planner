@@ -10,9 +10,9 @@ import { OnboardingProvider } from './context/OnboardingContext'
 
 function TeamLayout({ children }) {
   return (
-    <div className="min-h-screen bg-slate-100">
+    <div className="min-h-screen bg-black flex font-sans">
       <Navbar />
-      <main className="max-w-7xl mx-auto px-4 py-6">
+      <main className="flex-1 overflow-auto px-10 py-8">
         {children}
       </main>
       <Onboarding />

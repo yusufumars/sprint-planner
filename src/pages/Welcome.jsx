@@ -57,43 +57,47 @@ export default function Welcome() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center px-4">
+    <div className="min-h-screen bg-black flex flex-col items-center justify-center px-4 font-sans">
+      {/* Logo + tagline */}
       <div className="text-center mb-12">
         <div className="flex items-center justify-center gap-3 mb-4">
-          <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center shadow-lg">
-            <span className="text-white font-bold text-xl">SI</span>
+          <div className="w-9 h-9 bg-[#BFFF00] rounded flex items-center justify-center">
+            <span className="text-black font-bold text-sm font-mono">SI</span>
           </div>
-          <h1 className="text-5xl font-bold text-white">SprintIQ</h1>
+          <span className="text-white font-semibold text-base tracking-[3px] font-mono uppercase">SPRINTIQ</span>
         </div>
-        <p className="text-slate-400 text-xl">Smart sprint planning for agile teams</p>
+        <p className="text-[#6e6e6e] text-sm">Smart sprint planning for agile teams</p>
       </div>
 
+      {/* Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl">
         {/* Create Team */}
-        <div className="bg-white rounded-2xl shadow-xl p-8">
-          <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
-            <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
+        <div className="bg-[#111111] border border-[#1A1A1A] rounded-lg p-8 flex flex-col gap-5">
+          <div className="flex items-center gap-3">
+            <div className="w-6 h-6 bg-[#BFFF00] rounded-sm flex items-center justify-center shrink-0">
+              <svg className="w-3.5 h-3.5 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+            </div>
+            <h2 className="text-white font-semibold text-base">Create New Team</h2>
           </div>
-          <h2 className="text-xl font-bold text-slate-900 mb-1">Create New Team</h2>
-          <p className="text-slate-500 text-sm mb-6">Start fresh with a new team workspace</p>
-          <form onSubmit={handleCreate} className="space-y-4">
+          <p className="text-[#6e6e6e] text-sm">Start fresh with a new team workspace</p>
+          <form onSubmit={handleCreate} className="flex flex-col gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Team Name</label>
+              <label className="block font-mono text-xs text-[#6e6e6e] tracking-[2px] uppercase mb-2">Team Name</label>
               <input
                 value={teamName}
                 onChange={(e) => setTeamName(e.target.value)}
                 placeholder="e.g. Alpha Squad"
                 required
-                className="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full bg-black border border-[#1A1A1A] rounded px-3 h-10 text-sm text-white placeholder-[#404040] focus:outline-none focus:border-[#BFFF00]"
               />
             </div>
-            {createError && <p className="text-red-500 text-sm">{createError}</p>}
+            {createError && <p className="text-red-400 text-xs font-mono">{createError}</p>}
             <button
               type="submit"
               disabled={creating}
-              className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white py-2.5 rounded-lg font-medium text-sm transition-colors"
+              className="w-full bg-[#BFFF00] hover:opacity-90 disabled:opacity-50 text-black font-mono font-semibold text-sm h-11 rounded transition-opacity"
             >
               {creating ? 'Creating…' : 'Create Team'}
             </button>
@@ -101,38 +105,40 @@ export default function Welcome() {
         </div>
 
         {/* Join Team */}
-        <div className="bg-white rounded-2xl shadow-xl p-8">
-          <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center mb-4">
-            <svg className="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
+        <div className="bg-[#111111] border border-[#1A1A1A] rounded-lg p-8 flex flex-col gap-5">
+          <div className="flex items-center gap-3">
+            <div className="w-6 h-6 border border-[#404040] rounded-sm flex items-center justify-center shrink-0">
+              <svg className="w-3.5 h-3.5 text-[#6e6e6e]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </div>
+            <h2 className="text-white font-semibold text-base">Join Existing Team</h2>
           </div>
-          <h2 className="text-xl font-bold text-slate-900 mb-1">Join Existing Team</h2>
-          <p className="text-slate-500 text-sm mb-6">Enter your team code to access your workspace</p>
-          <form onSubmit={handleJoin} className="space-y-4">
+          <p className="text-[#6e6e6e] text-sm">Enter your team code to access your workspace</p>
+          <form onSubmit={handleJoin} className="flex flex-col gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Team Code</label>
+              <label className="block font-mono text-xs text-[#6e6e6e] tracking-[2px] uppercase mb-2">Team Code</label>
               <input
                 value={teamCode}
                 onChange={(e) => setTeamCode(e.target.value)}
                 placeholder="e.g. eha-x7k2"
                 required
-                className="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                className="w-full bg-black border border-[#1A1A1A] rounded px-3 h-10 text-sm text-white placeholder-[#404040] font-mono focus:outline-none focus:border-[#BFFF00]"
               />
             </div>
-            {joinError && <p className="text-red-500 text-sm">{joinError}</p>}
+            {joinError && <p className="text-red-400 text-xs font-mono">{joinError}</p>}
             <button
               type="submit"
               disabled={joining}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white py-2.5 rounded-lg font-medium text-sm transition-colors"
+              className="w-full bg-black border border-[#BFFF00] hover:bg-[#111111] disabled:opacity-50 text-white font-mono font-semibold text-sm h-11 rounded transition-colors"
             >
-              {joining ? 'Finding…' : 'Go to My Team'}
+              {joining ? 'Finding…' : 'Join My Team'}
             </button>
           </form>
         </div>
       </div>
 
-      <p className="text-slate-600 text-sm mt-10">
+      <p className="text-[#6e6e6e] text-xs font-mono mt-10">
         Each team gets a unique URL — bookmark it to always return to your workspace.
       </p>
     </div>

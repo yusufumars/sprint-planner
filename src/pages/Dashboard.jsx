@@ -33,12 +33,6 @@ function getSprintStatus(totalAssigned, effectiveCapacity) {
   return 'UNDERUTILIZED'
 }
 
-const SPRINT_STATUS_STYLES = {
-  OPTIMAL:      { ring: 'border-emerald-400', text: 'text-emerald-600', border: 'border-emerald-200', bg: 'bg-emerald-50' },
-  OVERCOMMITTED:{ ring: 'border-red-400',     text: 'text-red-600',     border: 'border-red-200',     bg: 'bg-red-50'     },
-  UNDERUTILIZED:{ ring: 'border-amber-400',   text: 'text-amber-600',   border: 'border-amber-200',   bg: 'bg-amber-50'   },
-}
-
 const defaultForm = { name: '', goal: '', start_date: '', end_date: '', story_points_per_member: 15, focus_factor: 80 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -53,7 +47,6 @@ export default function Dashboard() {
   const [activeSprint, setActiveSprint] = useState(null)
   const [members, setMembers] = useState([])
 
-  // { [memberId]: { id?, assigned_points } }
   const [sprintAvailability, setSprintAvailability] = useState({})
   const [leaveEntries, setLeaveEntries] = useState([])
   const [publicHolidays, setPublicHolidays] = useState([])
@@ -128,7 +121,7 @@ export default function Dashboard() {
     loadSprintData(activeSprint, members)
   }, [activeSprint, members, loadSprintData])
 
-  // ── Assigned SP handlers (snap to Fibonacci on save) ──────────────
+  // ── Assigned SP handlers ───────────────────────────────────────────
 
   function handleAssignedChange(memberId, value) {
     setSprintAvailability((prev) => ({
@@ -159,8 +152,6 @@ export default function Dashboard() {
       }
     }
   }
-
-  // ── Allocation % handler (saves immediately) ───────────────────────
 
   async function handleAllocationChange(memberId, value) {
     setMembers((prev) => prev.map((m) => m.id === memberId ? { ...m, allocation_percentage: value } : m))
@@ -199,7 +190,6 @@ export default function Dashboard() {
 
   const basePoints = activeSprint?.story_points_per_member || 0
   const focusFactor = activeSprint?.focus_factor || 80
-  // Overlap-clipped public holiday days (only days that fall inside this sprint)
   const sprintStart = activeSprint?.start_date || null
   const sprintEnd   = activeSprint?.end_date   || null
   const publicHolidayDays = publicHolidays.reduce(
@@ -213,7 +203,6 @@ export default function Dashboard() {
 
   const memberCapacities = {}
   members.forEach((m) => {
-    // Overlap-clipped individual leave days for this member in this sprint
     const individualLeaveDays = leaveEntries
       .filter((l) => l.member_id === m.id)
       .reduce((sum, l) => sum + calcOverlapDays(l.start_date, l.end_date, sprintStart, sprintEnd), 0)
@@ -230,19 +219,17 @@ export default function Dashboard() {
   const effectiveCapacity = Math.round(totalAdjustedSP * focusFactor / 100)
   const totalAssigned = members.reduce((sum, m) => sum + (assignedPoints[m.id] || 0), 0)
   const remainingCapacity = Math.round(effectiveCapacity - totalAssigned)
-  const avgAllocation = members.length > 0
-    ? Math.round(members.reduce((sum, m) => sum + (m.allocation_percentage || 100), 0) / members.length)
-    : 100
 
   const sprintUtilPct = effectiveCapacity > 0 ? Math.round((totalAssigned / effectiveCapacity) * 100) : 0
   const sprintStatus = getSprintStatus(totalAssigned, effectiveCapacity)
-  const ss = SPRINT_STATUS_STYLES[sprintStatus]
 
   const formWorkingDays = (form.start_date && form.end_date)
     ? calcWorkingDays(form.start_date, form.end_date)
     : null
 
-  if (!team) return <div className="text-center py-20 text-slate-400">Loading team…</div>
+  const inputClass = "w-full bg-black border border-[#1A1A1A] rounded px-3 py-2 text-sm text-white font-mono placeholder-[#404040] focus:outline-none focus:border-[#BFFF00]"
+
+  if (!team) return <div className="text-center py-20 text-[#6e6e6e] font-mono">Loading team…</div>
 
   return (
     <div className="space-y-6">
@@ -250,66 +237,62 @@ export default function Dashboard() {
       {/* ── Header ── */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
-          <p className="text-slate-500 text-sm mt-1">Sprint capacity planning for {team.name}</p>
+          <h1 className="text-2xl font-semibold text-white">Sprint Dashboard</h1>
+          <p className="text-[#6e6e6e] text-sm font-mono mt-1">{team.name} · {teamCode}</p>
         </div>
         <SprintSelector sprints={sprints} activeSprint={activeSprint} onSelect={setActiveSprint} onNew={() => setShowForm(true)} />
       </div>
 
       {/* ── Sprint creation form ── */}
       {showForm && (
-        <div className="bg-white rounded-xl shadow-sm border border-blue-200 p-6">
-          <h2 className="font-semibold text-slate-800 mb-4">Create New Sprint</h2>
+        <div className="bg-[#111111] rounded-lg border border-[#BFFF00] p-6">
+          <h2 className="text-white font-semibold text-sm mb-4">Create New Sprint</h2>
           <form onSubmit={handleCreateSprint} className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Sprint Name *</label>
+              <label className="block font-mono text-[10px] text-[#6e6e6e] tracking-[1px] uppercase mb-1.5">Sprint Name *</label>
               <input required value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="e.g. Sprint 12" />
+                className={inputClass} placeholder="e.g. Sprint 12" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Sprint Goal</label>
+              <label className="block font-mono text-[10px] text-[#6e6e6e] tracking-[1px] uppercase mb-1.5">Sprint Goal</label>
               <input value={form.goal} onChange={(e) => setForm((f) => ({ ...f, goal: e.target.value }))}
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="e.g. Launch user auth module" />
+                className={inputClass} placeholder="e.g. Launch user auth module" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Start Date</label>
+              <label className="block font-mono text-[10px] text-[#6e6e6e] tracking-[1px] uppercase mb-1.5">Start Date</label>
               <input type="date" value={form.start_date} onChange={(e) => setForm((f) => ({ ...f, start_date: e.target.value }))}
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                className={inputClass} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
+              <label className="block font-mono text-[10px] text-[#6e6e6e] tracking-[1px] uppercase mb-1.5">
                 End Date
                 {formWorkingDays !== null && (
-                  <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">
-                    {formWorkingDays} working day{formWorkingDays !== 1 ? 's' : ''}
-                  </span>
+                  <span className="ml-2 text-[#BFFF00]">{formWorkingDays} working day{formWorkingDays !== 1 ? 's' : ''}</span>
                 )}
               </label>
               <input type="date" value={form.end_date} min={form.start_date || undefined}
                 onChange={(e) => setForm((f) => ({ ...f, end_date: e.target.value }))}
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                className={inputClass} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Story Points / Member</label>
+              <label className="block font-mono text-[10px] text-[#6e6e6e] tracking-[1px] uppercase mb-1.5">Story Points / Member</label>
               <input type="number" min="1" value={form.story_points_per_member}
                 onChange={(e) => setForm((f) => ({ ...f, story_points_per_member: e.target.value }))}
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                className={inputClass} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Focus Factor %</label>
+              <label className="block font-mono text-[10px] text-[#6e6e6e] tracking-[1px] uppercase mb-1.5">Focus Factor %</label>
               <input type="number" min="1" max="100" value={form.focus_factor}
                 onChange={(e) => setForm((f) => ({ ...f, focus_factor: e.target.value }))}
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                className={inputClass} />
             </div>
-            <div className="col-span-2 flex gap-2">
+            <div className="col-span-2 flex gap-3">
               <button type="submit" disabled={saving}
-                className="bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors">
+                className="bg-[#BFFF00] hover:opacity-90 disabled:opacity-50 text-black font-mono font-semibold text-xs px-6 py-2.5 rounded transition-opacity">
                 {saving ? 'Creating…' : 'Create Sprint'}
               </button>
               <button type="button" onClick={() => setShowForm(false)}
-                className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-6 py-2 rounded-lg text-sm font-medium transition-colors">
+                className="bg-[#1A1A1A] hover:bg-[#2A2A2A] text-[#6e6e6e] font-mono text-xs px-6 py-2.5 rounded transition-colors">
                 Cancel
               </button>
             </div>
@@ -319,10 +302,10 @@ export default function Dashboard() {
 
       {/* ── Empty state ── */}
       {!activeSprint && !showForm && (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
-          <p className="text-slate-400 text-lg mb-4">No sprints yet</p>
+        <div className="bg-[#111111] rounded-lg border border-[#1A1A1A] p-12 text-center">
+          <p className="text-[#6e6e6e] font-mono text-sm mb-4">No sprints yet</p>
           <button onClick={() => setShowForm(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg font-medium text-sm">
+            className="bg-[#BFFF00] hover:opacity-90 text-black font-mono font-semibold text-xs px-6 py-2.5 rounded transition-opacity">
             Create Your First Sprint
           </button>
         </div>
@@ -331,74 +314,64 @@ export default function Dashboard() {
       {activeSprint && (
         <>
           {/* ── Sprint info panel ── */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+          <div className="bg-[#111111] rounded-lg border border-[#1A1A1A] px-5 py-4">
             <div className="flex items-center gap-3 mb-2">
-              <h2 className="text-lg font-bold text-slate-900">{activeSprint.name}</h2>
+              <h2 className="text-white font-semibold">{activeSprint.name}</h2>
               {activeSprint.is_active && (
-                <span className="bg-emerald-100 text-emerald-700 text-xs font-medium px-2 py-0.5 rounded-full">Active</span>
+                <span className="bg-[#BFFF00] text-black font-mono text-[10px] font-semibold px-2 py-0.5 rounded">Active</span>
               )}
             </div>
-            {activeSprint.goal && <p className="text-slate-600 text-sm mb-3">{activeSprint.goal}</p>}
-            <div className="flex flex-wrap gap-5 text-sm text-slate-500">
-              {activeSprint.start_date && <span>Start: <strong className="text-slate-700">{activeSprint.start_date}</strong></span>}
-              {activeSprint.end_date && <span>End: <strong className="text-slate-700">{activeSprint.end_date}</strong></span>}
+            {activeSprint.goal && <p className="text-[#6e6e6e] text-sm mb-3 font-mono">{activeSprint.goal}</p>}
+            <div className="flex flex-wrap gap-5 text-xs text-[#6e6e6e] font-mono">
+              {activeSprint.start_date && <span>Start: <strong className="text-white">{activeSprint.start_date}</strong></span>}
+              {activeSprint.end_date && <span>End: <strong className="text-white">{activeSprint.end_date}</strong></span>}
               <span>
-                Sprint Working Days: <strong className="text-slate-700">{sprintWorkingDays}</strong>
+                Working Days: <strong className="text-white">{sprintWorkingDays}</strong>
                 {!activeSprint.start_date && (
-                  <span className="text-amber-500 text-xs ml-1">(using default — set sprint dates for accuracy)</span>
+                  <span className="text-[#F59E0B] ml-1">(using default)</span>
                 )}
               </span>
-              <span>SP/Member: <strong className="text-slate-700">{activeSprint.story_points_per_member}</strong></span>
-              <span>Focus: <strong className="text-slate-700">{activeSprint.focus_factor}%</strong></span>
+              <span>SP/Member: <strong className="text-white">{activeSprint.story_points_per_member}</strong></span>
+              <span>Focus: <strong className="text-white">{activeSprint.focus_factor}%</strong></span>
               {publicHolidayDays > 0 && (
-                <span>Public Holidays: <strong className="text-amber-600">{publicHolidayDays} day{publicHolidayDays !== 1 ? 's' : ''}</strong></span>
+                <span>Public Holidays: <strong className="text-[#F59E0B]">{publicHolidayDays} day{publicHolidayDays !== 1 ? 's' : ''}</strong></span>
               )}
-            </div>
-          </div>
-
-          {/* ── Sprint Health Card ── */}
-          <div className={`rounded-xl shadow-sm border p-6 ${ss.bg} ${ss.border}`}>
-            <div className="flex items-center justify-between gap-6">
-              <div className="flex-1">
-                <p className="text-xs font-medium uppercase tracking-widest text-slate-500 mb-1">Sprint Health</p>
-                <p className={`text-4xl font-bold ${ss.text}`}>{sprintStatus}</p>
-                <p className="text-slate-600 text-sm mt-2">
-                  <strong>{totalAssigned}</strong> of <strong>{effectiveCapacity}</strong> effective capacity points assigned
-                </p>
-                {sprintStatus === 'UNDERUTILIZED' && effectiveCapacity > 0 && (
-                  <p className={`text-sm mt-1 ${ss.text}`}>
-                    {remainingCapacity} points of capacity available — consider adding more scope
-                  </p>
-                )}
-                {sprintStatus === 'OVERCOMMITTED' && (
-                  <p className={`text-sm mt-1 ${ss.text}`}>
-                    {Math.abs(remainingCapacity)} points over capacity — reduce scope or adjust leave
-                  </p>
-                )}
-                {sprintStatus === 'OPTIMAL' && (
-                  <p className={`text-sm mt-1 ${ss.text}`}>Sprint is optimally loaded</p>
-                )}
-              </div>
-              <div className={`w-36 h-36 rounded-full border-8 ${ss.ring} flex flex-col items-center justify-center flex-shrink-0`}>
-                <span className={`text-3xl font-bold ${ss.text}`}>{sprintUtilPct}%</span>
-                <span className="text-xs text-slate-500 mt-0.5">utilization</span>
-              </div>
             </div>
           </div>
 
           {/* ── Capacity metric cards ── */}
-          <div className="grid grid-cols-3 lg:grid-cols-6 gap-4">
-            <CapacityCard label="Total SP Capacity" value={totalBaseCapacity} sub="raw" color="slate" />
-            <CapacityCard label="Adjusted Capacity" value={totalAdjustedSP} sub="after leave & allocation" color="purple" />
-            <CapacityCard label="Effective Capacity" value={effectiveCapacity} sub={`at ${focusFactor}% focus`} color="blue" />
-            <CapacityCard label="Total Assigned" value={totalAssigned} color={sprintStatus === 'OVERCOMMITTED' ? 'red' : 'green'} />
-            <CapacityCard label="Remaining" value={remainingCapacity} color={remainingCapacity < 0 ? 'red' : 'green'} />
-            <CapacityCard label="Avg Allocation" value={`${avgAllocation}%`} sub="across team" color="blue" />
+          <div className="grid grid-cols-5 gap-3">
+            <CapacityCard
+              label="Total Capacity"
+              value={totalBaseCapacity}
+              sub={`${members.length} members × ${basePoints} SP`}
+            />
+            <CapacityCard
+              label="Adjusted Capacity"
+              value={totalAdjustedSP}
+              sub="After leave deductions"
+            />
+            <CapacityCard
+              label="Target Capacity"
+              value={effectiveCapacity}
+              sub={`${focusFactor}% focus factor`}
+              accent
+            />
+            <CapacityCard
+              label="Assigned SP"
+              value={totalAssigned}
+              sub={`${sprintUtilPct}% utilized`}
+            />
+            <CapacityCard
+              label="Remaining SP"
+              value={remainingCapacity}
+              sub="Available capacity"
+            />
           </div>
 
           {/* ── Team Capacity Table ── */}
           {loading ? (
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-10 text-center text-slate-400">
+            <div className="bg-[#111111] rounded-lg border border-[#1A1A1A] p-10 text-center text-[#6e6e6e] font-mono text-sm">
               Loading capacity data…
             </div>
           ) : (
@@ -411,6 +384,8 @@ export default function Dashboard() {
               onAssignedChange={handleAssignedChange}
               onAssignedBlur={handleAssignedBlur}
               onAllocationChange={handleAllocationChange}
+              sprintStatus={sprintStatus}
+              sprintUtilPct={sprintUtilPct}
             />
           )}
         </>

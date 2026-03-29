@@ -1,10 +1,23 @@
-import { Link, useParams, useLocation } from 'react-router-dom'
+import { Link, useParams, useLocation, useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+
+const NAV_ITEMS = [
+  { label: 'Dashboard', key: 'dashboard', path: '' },
+  { label: 'Team', key: 'team', path: '/team' },
+  { label: 'Velocity', key: 'velocity', path: '/velocity' },
+  { label: 'Settings', key: 'settings', path: '/settings', id: 'onboarding-settings-link' },
+]
+
+function getInitials(name) {
+  if (!name) return '?'
+  return name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()
+}
 
 export default function Navbar() {
   const { teamCode } = useParams()
   const location = useLocation()
+  const navigate = useNavigate()
   const [teamName, setTeamName] = useState('')
 
   useEffect(() => {
@@ -18,51 +31,62 @@ export default function Navbar() {
   }, [teamCode])
 
   const base = `/team/${teamCode}`
-  const links = [
-    { label: 'Dashboard', to: base },
-    { label: 'Team', to: `${base}/team` },
-    { label: 'Velocity', to: `${base}/velocity` },
-    { label: 'Settings', to: `${base}/settings`, id: 'onboarding-settings-link' },
-  ]
 
-  const isActive = (to) => {
-    if (to === base) return location.pathname === base
-    return location.pathname.startsWith(to)
+  const isActive = (path) => {
+    const full = path === '' ? base : `${base}${path}`
+    if (path === '') return location.pathname === base
+    return location.pathname.startsWith(full)
   }
 
   return (
-    <nav className="bg-slate-900 shadow-lg">
-      <div className="max-w-7xl mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
-          <Link to={base} className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">SI</span>
-            </div>
-            <span className="text-white font-bold text-xl">SprintIQ</span>
-          </Link>
+    <nav className="w-60 min-h-screen bg-black border-r border-[#1A1A1A] flex flex-col p-6 shrink-0">
+      {/* Logo */}
+      <Link to={base} className="flex items-center gap-3 mb-10">
+        <div className="w-7 h-7 bg-[#BFFF00] rounded flex items-center justify-center shrink-0">
+          <span className="text-black font-bold text-xs font-mono">SI</span>
+        </div>
+        <span className="text-white font-semibold text-xs tracking-[3px] font-mono uppercase">SPRINTIQ</span>
+      </Link>
 
-          <div className="flex items-center gap-1">
-            {links.map(({ label, to, id }) => (
-              <Link
-                key={to}
-                to={to}
-                id={id}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                  isActive(to)
-                    ? 'bg-blue-600 text-white'
-                    : 'text-slate-300 hover:bg-slate-700 hover:text-white'
-                }`}
-              >
-                {label}
-              </Link>
-            ))}
+      {/* Nav links */}
+      <div className="flex flex-col gap-1 flex-1">
+        {NAV_ITEMS.map(({ label, key, path, id }) => {
+          const active = isActive(path)
+          const to = path === '' ? base : `${base}${path}`
+          return (
+            <Link
+              key={key}
+              to={to}
+              id={id}
+              className={`px-3 py-2.5 rounded text-xs font-mono transition-colors ${
+                active
+                  ? 'bg-[#1A1A1A] text-[#BFFF00] font-medium'
+                  : 'text-[#6e6e6e] hover:text-white hover:bg-[#1A1A1A]'
+              }`}
+            >
+              {label}
+            </Link>
+          )
+        })}
+      </div>
+
+      {/* Bottom: team info + sign out */}
+      <div className="mt-auto pt-6 border-t border-[#1A1A1A]">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-8 h-8 rounded-full bg-[#2A2A2A] flex items-center justify-center shrink-0">
+            <span className="text-[#BFFF00] text-xs font-mono font-semibold">{getInitials(teamName)}</span>
           </div>
-
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-            <span className="text-slate-300 text-sm font-medium">{teamName || teamCode}</span>
+          <div className="min-w-0">
+            <p className="text-white text-xs font-medium truncate">{teamName || teamCode}</p>
+            <p className="text-[#6e6e6e] text-xs font-mono truncate">{teamCode}</p>
           </div>
         </div>
+        <button
+          onClick={() => navigate('/')}
+          className="text-[#6e6e6e] text-xs font-mono hover:text-white transition-colors"
+        >
+          ← Sign Out
+        </button>
       </div>
     </nav>
   )

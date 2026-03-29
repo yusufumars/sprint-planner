@@ -6,6 +6,16 @@ import LeaveManagement from '../components/LeaveManagement'
 const ROLES = ['Software Engineer Lead', 'Senior Software Engineer', 'Associate Software Engineer']
 const ALLOCATION_OPTIONS = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
 
+const AVATAR_COLORS = ['#0D6E6E', '#F59E0B', '#3B82F6', '#E07B54', '#8B5CF6', '#EF4444']
+
+function getInitials(name) {
+  if (!name) return '?'
+  return name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()
+}
+
+const inputClass = "w-full bg-black border border-[#1A1A1A] rounded px-3 py-2 text-sm text-white font-mono placeholder-[#404040] focus:outline-none focus:border-[#BFFF00]"
+const selectClass = "bg-black border border-[#1A1A1A] rounded px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-[#BFFF00]"
+
 export default function Team() {
   const { teamCode } = useParams()
   const [searchParams] = useSearchParams()
@@ -15,9 +25,8 @@ export default function Team() {
   const [leaveEntries, setLeaveEntries] = useState([])
   const [publicHolidays, setPublicHolidays] = useState([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState('members') // 'members' | 'leave'
+  const [activeTab, setActiveTab] = useState('members')
 
-  // Member form
   const [newName, setNewName] = useState('')
   const [newRole, setNewRole] = useState(ROLES[0])
   const [adding, setAdding] = useState(false)
@@ -28,7 +37,6 @@ export default function Team() {
   const [editError, setEditError] = useState('')
   const [deleteConfirm, setDeleteConfirm] = useState(null)
 
-  // Sync tab from URL param (used by onboarding to deep-link to leave tab)
   useEffect(() => {
     const tab = searchParams.get('tab')
     if (tab === 'leave') setActiveTab('leave')
@@ -36,13 +44,10 @@ export default function Team() {
 
   const loadLeaveData = useCallback(async (sprintId) => {
     if (!sprintId) return
-    console.log('[Team] Loading leave data for sprint_id:', sprintId)
-    const [{ data: leaveData, error: leaveErr }, { data: holidayData, error: holidayErr }] = await Promise.all([
+    const [{ data: leaveData }, { data: holidayData }] = await Promise.all([
       supabase.from('member_leave').select('*').eq('sprint_id', sprintId).order('created_at'),
       supabase.from('public_holidays').select('*').eq('sprint_id', sprintId).order('created_at'),
     ])
-    if (leaveErr) console.error('[Team] member_leave fetch error:', leaveErr)
-    if (holidayErr) console.error('[Team] public_holidays fetch error:', holidayErr)
     setLeaveEntries(leaveData || [])
     setPublicHolidays(holidayData || [])
   }, [])
@@ -67,8 +72,6 @@ export default function Team() {
     load()
   }, [teamCode, loadLeaveData])
 
-  // ── Member actions ─────────────────────────────────────────────────
-
   async function handleAdd(e) {
     e.preventDefault()
     if (!newName.trim() || !team) return
@@ -80,8 +83,7 @@ export default function Team() {
       .select()
       .single()
     if (error) {
-      console.error('[Team] Add member error:', error)
-      setAddError(`Failed to add member: ${error.message}. Make sure migrations have been run (role column required).`)
+      setAddError(`Failed to add member: ${error.message}`)
     } else if (data) {
       setMembers((m) => [...m, data])
       setNewName('')
@@ -104,15 +106,8 @@ export default function Team() {
   async function handleEditSave(id) {
     if (!editName.trim()) return
     setEditError('')
-    const { error } = await supabase
-      .from('team_members')
-      .update({ name: editName.trim(), role: editRole })
-      .eq('id', id)
-    if (error) {
-      console.error('[Team] Edit member error:', error)
-      setEditError(`Failed to save: ${error.message}`)
-      return
-    }
+    const { error } = await supabase.from('team_members').update({ name: editName.trim(), role: editRole }).eq('id', id)
+    if (error) { setEditError(`Failed to save: ${error.message}`); return }
     setMembers((m) => m.map((x) => x.id === id ? { ...x, name: editName.trim(), role: editRole } : x))
     setEditId(null)
   }
@@ -124,34 +119,42 @@ export default function Team() {
     setEditError('')
   }
 
-  // ── Render ─────────────────────────────────────────────────────────
-
-  if (loading) return <div className="text-center py-20 text-slate-400">Loading…</div>
-  if (!team) return <div className="text-center py-20 text-slate-400">Team not found.</div>
+  if (loading) return <div className="text-center py-20 text-[#6e6e6e] font-mono">Loading…</div>
+  if (!team) return <div className="text-center py-20 text-[#6e6e6e] font-mono">Team not found.</div>
 
   const tabs = [
-    { key: 'members', label: `Members (${members.length})` },
+    { key: 'members', label: `Members` },
     { key: 'leave', label: 'Leave & Holidays', id: 'onboarding-leave-tab' },
   ]
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">Team</h1>
-        <p className="text-slate-500 text-sm mt-1">Manage team members and sprint leave</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-white">Team Management</h1>
+          <p className="text-[#6e6e6e] text-sm font-mono mt-1">Manage team members and sprint leave</p>
+        </div>
+        {activeTab === 'members' && (
+          <button
+            onClick={() => document.getElementById('add-member-name')?.focus()}
+            className="bg-[#BFFF00] hover:opacity-90 text-black font-mono font-semibold text-xs px-4 py-2.5 rounded transition-opacity"
+          >
+            + Add Member
+          </button>
+        )}
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-slate-200">
+      <div className="flex bg-[#111111] border border-[#1A1A1A] rounded p-1 gap-1 w-fit">
         {tabs.map((t) => (
           <button
             key={t.key}
             id={t.id}
             onClick={() => setActiveTab(t.key)}
-            className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+            className={`px-4 py-2 text-xs font-mono rounded transition-colors ${
               activeTab === t.key
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-slate-500 hover:text-slate-700'
+                ? 'bg-[#BFFF00] text-black font-semibold'
+                : 'text-[#6e6e6e] hover:text-white'
             }`}
           >
             {t.label}
@@ -163,120 +166,129 @@ export default function Team() {
       {activeTab === 'members' && (
         <>
           {/* Add member form */}
-          <div id="onboarding-add-member-form" className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-            <h2 className="font-semibold text-slate-800 mb-4">Add Team Member</h2>
+          <div id="onboarding-add-member-form" className="bg-[#111111] rounded-lg border border-[#1A1A1A] p-6">
+            <h2 className="text-white font-semibold text-sm mb-4">Add Team Member</h2>
             <form onSubmit={handleAdd} className="flex gap-3">
               <input
+                id="add-member-name"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 placeholder="Member name"
                 required
-                className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 bg-black border border-[#1A1A1A] rounded px-3 py-2 text-sm text-white font-mono placeholder-[#404040] focus:outline-none focus:border-[#BFFF00]"
               />
               <select
                 value={newRole}
                 onChange={(e) => setNewRole(e.target.value)}
-                className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={selectClass}
               >
                 {ROLES.map((r) => <option key={r}>{r}</option>)}
               </select>
               <button type="submit" disabled={adding}
-                className="bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white px-5 py-2 rounded-lg text-sm font-medium transition-colors">
+                className="bg-[#BFFF00] hover:opacity-90 disabled:opacity-50 text-black font-mono font-semibold text-xs px-5 py-2 rounded transition-opacity">
                 {adding ? 'Adding…' : 'Add Member'}
               </button>
             </form>
             {addError && (
-              <p className="mt-3 text-red-600 text-xs bg-red-50 border border-red-200 rounded-lg px-3 py-2">{addError}</p>
+              <p className="mt-3 text-red-400 text-xs font-mono bg-[#0D0000] border border-red-900 rounded px-3 py-2">{addError}</p>
             )}
           </div>
 
           {/* Members list */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100">
-              <h2 className="font-semibold text-slate-800">Team Members</h2>
+          <div className="bg-[#111111] rounded-lg border border-[#1A1A1A] overflow-hidden">
+            <div className="px-6 py-4 border-b border-[#1A1A1A]">
+              <h2 className="text-white font-semibold text-sm">Team Members ({members.length})</h2>
             </div>
 
             {members.length === 0 ? (
-              <div className="text-center py-12 text-slate-400">No members yet. Add your first team member above.</div>
+              <div className="text-center py-12 text-[#6e6e6e] font-mono text-sm">No members yet. Add your first team member above.</div>
             ) : (
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide">
+                  <tr className="bg-black text-[#404040] font-mono text-[10px] tracking-[1px] uppercase">
                     <th className="text-left px-6 py-3">Name</th>
                     <th className="text-left px-4 py-3">Role</th>
                     <th className="text-center px-4 py-3">Allocation %</th>
                     <th className="text-right px-6 py-3">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {members.map((m) => (
-                    <tr key={m.id} className="hover:bg-slate-50">
-                      <td className="px-6 py-4">
-                        {editId === m.id ? (
-                          <input
-                            value={editName}
-                            onChange={(e) => setEditName(e.target.value)}
-                            className="border border-blue-400 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 w-48"
-                          />
-                        ) : (
-                          <span className="font-medium text-slate-800">{m.name}</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-4">
-                        {editId === m.id ? (
-                          <>
-                            <select
-                              value={editRole}
-                              onChange={(e) => setEditRole(e.target.value)}
-                              className="border border-blue-400 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            >
-                              {ROLES.map((r) => <option key={r}>{r}</option>)}
-                            </select>
-                            {editError && <p className="text-red-600 text-xs mt-1">{editError}</p>}
-                          </>
-                        ) : (
-                          <span className="text-slate-500 text-xs">{m.role || '—'}</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-4 text-center">
-                        <select
-                          value={m.allocation_percentage || 100}
-                          onChange={(e) => handleAllocationChange(m.id, parseInt(e.target.value, 10))}
-                          className="border border-slate-300 rounded px-2 py-1 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
-                        >
-                          {ALLOCATION_OPTIONS.map((v) => (
-                            <option key={v} value={v}>{v}%</option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-3">
+                <tbody>
+                  {members.map((m, idx) => {
+                    const avatarColor = AVATAR_COLORS[idx % AVATAR_COLORS.length]
+                    return (
+                      <tr key={m.id} className="border-t border-[#1A1A1A] hover:bg-[#0a0a0a]">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-full bg-[#1A1A1A] flex items-center justify-center shrink-0">
+                              <span className="font-mono text-xs font-semibold" style={{ color: avatarColor }}>{getInitials(m.name)}</span>
+                            </div>
+                            {editId === m.id ? (
+                              <input
+                                value={editName}
+                                onChange={(e) => setEditName(e.target.value)}
+                                className="bg-black border border-[#BFFF00] rounded px-2 py-1 text-sm text-white font-mono focus:outline-none w-40"
+                              />
+                            ) : (
+                              <span className="font-medium text-white">{m.name}</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-4">
                           {editId === m.id ? (
                             <>
-                              <button onClick={() => handleEditSave(m.id)}
-                                className="text-blue-600 hover:text-blue-800 text-xs font-medium">Save</button>
-                              <button onClick={() => setEditId(null)}
-                                className="text-slate-400 hover:text-slate-600 text-xs">Cancel</button>
+                              <select
+                                value={editRole}
+                                onChange={(e) => setEditRole(e.target.value)}
+                                className="bg-black border border-[#BFFF00] rounded px-2 py-1 text-xs text-white font-mono focus:outline-none"
+                              >
+                                {ROLES.map((r) => <option key={r}>{r}</option>)}
+                              </select>
+                              {editError && <p className="text-red-400 text-xs font-mono mt-1">{editError}</p>}
                             </>
                           ) : (
-                            <button onClick={() => startEdit(m)}
-                              className="text-blue-500 hover:text-blue-700 text-xs font-medium">Edit</button>
+                            <span className="text-[#6e6e6e] text-xs font-mono">{m.role || '—'}</span>
                           )}
-                          {deleteConfirm === m.id ? (
-                            <>
-                              <button onClick={() => handleDelete(m.id)}
-                                className="text-red-600 hover:text-red-800 text-xs font-medium">Confirm</button>
-                              <button onClick={() => setDeleteConfirm(null)}
-                                className="text-slate-400 text-xs">Cancel</button>
-                            </>
-                          ) : (
-                            <button onClick={() => setDeleteConfirm(m.id)}
-                              className="text-red-400 hover:text-red-600 text-xs font-medium">Remove</button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="px-4 py-4 text-center">
+                          <select
+                            value={m.allocation_percentage || 100}
+                            onChange={(e) => handleAllocationChange(m.id, parseInt(e.target.value, 10))}
+                            className="bg-[#1A1A1A] border border-[#2A2A2A] rounded px-2 py-1 text-xs text-white font-mono focus:outline-none focus:border-[#BFFF00]"
+                          >
+                            {ALLOCATION_OPTIONS.map((v) => (
+                              <option key={v} value={v}>{v}%</option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex items-center justify-end gap-3">
+                            {editId === m.id ? (
+                              <>
+                                <button onClick={() => handleEditSave(m.id)}
+                                  className="text-[#BFFF00] hover:opacity-70 text-xs font-mono font-medium">Save</button>
+                                <button onClick={() => setEditId(null)}
+                                  className="text-[#6e6e6e] hover:text-white text-xs font-mono">Cancel</button>
+                              </>
+                            ) : (
+                              <button onClick={() => startEdit(m)}
+                                className="text-[#6e6e6e] hover:text-white text-xs font-mono">Edit</button>
+                            )}
+                            {deleteConfirm === m.id ? (
+                              <>
+                                <button onClick={() => handleDelete(m.id)}
+                                  className="text-red-400 hover:text-red-300 text-xs font-mono font-medium">Confirm</button>
+                                <button onClick={() => setDeleteConfirm(null)}
+                                  className="text-[#6e6e6e] text-xs font-mono">Cancel</button>
+                              </>
+                            ) : (
+                              <button onClick={() => setDeleteConfirm(m.id)}
+                                className="text-red-500 hover:text-red-400 text-xs font-mono">Remove</button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             )}

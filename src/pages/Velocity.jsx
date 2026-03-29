@@ -11,7 +11,7 @@ export default function Velocity() {
   const [completingId, setCompletingId] = useState(null)
   const [completedPoints, setCompletedPoints] = useState('')
   const [saving, setSaving] = useState(false)
-  const [committedPoints, setCommittedPoints] = useState({}) // { sprintId: totalAssignedPoints }
+  const [committedPoints, setCommittedPoints] = useState({})
 
   useEffect(() => {
     async function load() {
@@ -24,7 +24,6 @@ export default function Velocity() {
       if (!sprintsData) { setLoading(false); return }
       setSprints(sprintsData)
 
-      // Load committed points from sprint_availability (manually entered assigned SP)
       const ids = sprintsData.map((s) => s.id)
       if (ids.length > 0) {
         const { data: avData } = await supabase
@@ -62,45 +61,47 @@ export default function Velocity() {
     : null
 
   const best = completedSprints.reduce((best, s) => (!best || (s.completed_points || 0) > (best.completed_points || 0)) ? s : best, null)
-  const worst = completedSprints.reduce((worst, s) => (!worst || (s.completed_points || 0) < (worst.completed_points || 0)) ? s : worst, null)
 
-  // Build chart data using assigned SP as committed
   const chartData = sprints.map((s) => ({
     ...s,
     committed: committedPoints[s.id] || 0,
     completed: s.completed_points || 0,
   }))
 
-  if (loading) return <div className="text-center py-20 text-slate-400">Loading…</div>
-  if (!team) return <div className="text-center py-20 text-slate-400">Team not found.</div>
+  if (loading) return <div className="text-center py-20 text-[#6e6e6e] font-mono">Loading…</div>
+  if (!team) return <div className="text-center py-20 text-[#6e6e6e] font-mono">Team not found.</div>
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Velocity</h1>
-        <p className="text-slate-500 text-sm mt-1">Track sprint performance over time</p>
+        <h1 className="text-2xl font-semibold text-white">Velocity</h1>
+        <p className="text-[#6e6e6e] text-sm font-mono mt-1">Track sprint performance over time</p>
       </div>
 
       {/* Metrics cards */}
-      <div className="grid grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-          <p className="text-slate-500 text-xs uppercase tracking-wide">Avg Velocity (Last 3)</p>
-          <p className="text-2xl font-bold text-slate-900 mt-1">{avgVelocity !== null ? `${avgVelocity} pts` : '—'}</p>
-          {last3.length < 3 && <p className="text-slate-400 text-xs mt-1">Need {3 - last3.length} more completed sprint{3 - last3.length !== 1 ? 's' : ''}</p>}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="bg-[#111111] rounded-lg border border-[#1A1A1A] p-5 flex flex-col gap-2">
+          <p className="font-mono text-[10px] text-[#6e6e6e] tracking-[2px] uppercase">Avg Velocity</p>
+          <p className="text-3xl font-semibold text-white font-sans">{avgVelocity !== null ? avgVelocity : '—'}</p>
+          <p className="font-mono text-xs text-[#999999]">
+            {last3.length < 3 ? `Need ${3 - last3.length} more sprint${3 - last3.length !== 1 ? 's' : ''}` : 'Last 3 sprints avg'}
+          </p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-          <p className="text-slate-500 text-xs uppercase tracking-wide">Suggested Commitment</p>
-          <p className="text-2xl font-bold text-blue-600 mt-1">{avgVelocity !== null ? `${avgVelocity} pts` : 'Not enough data'}</p>
+
+        <div className="bg-[#BFFF00] rounded-lg border border-[#BFFF00] p-5 flex flex-col gap-2">
+          <p className="font-mono text-[10px] text-black tracking-[2px] uppercase">Current Sprint</p>
+          <p className="text-3xl font-semibold text-black font-sans">
+            {sprints.find((s) => s.is_active)?.name || '—'}
+          </p>
+          <p className="font-mono text-xs text-black">
+            {best ? `Best: ${best.completed_points} pts — ${best.name}` : 'No completed sprints yet'}
+          </p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-          <p className="text-slate-500 text-xs uppercase tracking-wide">Best Sprint</p>
-          <p className="text-2xl font-bold text-emerald-600 mt-1">{best ? `${best.completed_points} pts` : '—'}</p>
-          {best && <p className="text-slate-400 text-xs mt-1 truncate">{best.name}</p>}
-        </div>
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-          <p className="text-slate-500 text-xs uppercase tracking-wide">Lowest Sprint</p>
-          <p className="text-2xl font-bold text-amber-600 mt-1">{worst ? `${worst.completed_points} pts` : '—'}</p>
-          {worst && <p className="text-slate-400 text-xs mt-1 truncate">{worst.name}</p>}
+
+        <div className="bg-[#111111] rounded-lg border border-[#1A1A1A] p-5 flex flex-col gap-2">
+          <p className="font-mono text-[10px] text-[#6e6e6e] tracking-[2px] uppercase">Suggested Next</p>
+          <p className="text-3xl font-semibold text-white font-sans">{avgVelocity !== null ? avgVelocity : '—'}</p>
+          <p className="font-mono text-xs text-[#999999]">Based on avg velocity</p>
         </div>
       </div>
 
@@ -108,16 +109,16 @@ export default function Velocity() {
       <VelocityChart sprints={chartData} />
 
       {/* Sprint Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100">
-          <h2 className="font-semibold text-slate-800">All Sprints</h2>
+      <div className="bg-[#111111] rounded-lg border border-[#1A1A1A] overflow-hidden">
+        <div className="px-6 py-4 border-b border-[#1A1A1A]">
+          <h2 className="text-white font-semibold text-sm">All Sprints</h2>
         </div>
         {sprints.length === 0 ? (
-          <div className="text-center py-12 text-slate-400">No sprints yet.</div>
+          <div className="text-center py-12 text-[#6e6e6e] font-mono text-sm">No sprints yet.</div>
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide">
+              <tr className="bg-black text-[#404040] font-mono text-[10px] tracking-[1px] uppercase">
                 <th className="text-left px-6 py-3">Sprint</th>
                 <th className="text-right px-4 py-3">Committed</th>
                 <th className="text-right px-4 py-3">Completed</th>
@@ -126,7 +127,7 @@ export default function Velocity() {
                 <th className="text-right px-6 py-3">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody>
               {sprints.map((s) => {
                 const committed = committedPoints[s.id] || 0
                 const completed = s.completed_points
@@ -135,12 +136,12 @@ export default function Velocity() {
                   : null
 
                 return (
-                  <tr key={s.id} className="hover:bg-slate-50">
+                  <tr key={s.id} className="border-t border-[#1A1A1A] hover:bg-[#0a0a0a]">
                     <td className="px-6 py-4">
-                      <p className="font-medium text-slate-800">{s.name}</p>
-                      {s.goal && <p className="text-slate-400 text-xs">{s.goal}</p>}
+                      <p className="font-medium text-white">{s.name}</p>
+                      {s.goal && <p className="text-[#6e6e6e] text-xs font-mono mt-0.5">{s.goal}</p>}
                     </td>
-                    <td className="px-4 py-4 text-right text-slate-700">{committed}</td>
+                    <td className="px-4 py-4 text-right font-mono text-sm text-[#999999]">{committed}</td>
                     <td className="px-4 py-4 text-right">
                       {completingId === s.id ? (
                         <input
@@ -148,21 +149,25 @@ export default function Velocity() {
                           value={completedPoints}
                           onChange={(e) => setCompletedPoints(e.target.value)}
                           placeholder="0"
-                          className="w-20 text-right border border-slate-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          className="w-20 text-right bg-black border border-[#BFFF00] rounded px-2 py-1 text-sm font-mono text-white focus:outline-none"
                         />
                       ) : (
-                        <span className="text-slate-700">{completed != null ? completed : <span className="text-slate-300">—</span>}</span>
+                        <span className="font-mono text-sm text-[#999999]">
+                          {completed != null ? completed : <span className="text-[#404040]">—</span>}
+                        </span>
                       )}
                     </td>
-                    <td className="px-4 py-4 text-right">
+                    <td className="px-4 py-4 text-right font-mono text-sm">
                       {velocityPct !== null ? (
-                        <span className={`font-medium ${velocityPct >= 90 ? 'text-emerald-600' : velocityPct >= 70 ? 'text-amber-600' : 'text-red-500'}`}>
+                        <span className={velocityPct >= 90 ? 'text-[#BFFF00] font-semibold' : velocityPct >= 70 ? 'text-[#F59E0B]' : 'text-red-400'}>
                           {velocityPct}%
                         </span>
-                      ) : <span className="text-slate-300">—</span>}
+                      ) : <span className="text-[#404040]">—</span>}
                     </td>
                     <td className="px-4 py-4 text-center">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${s.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
+                      <span className={`font-mono text-[10px] font-semibold px-2 py-0.5 rounded ${
+                        s.is_active ? 'bg-[#BFFF00] text-black' : 'text-[#6e6e6e]'
+                      }`}>
                         {s.is_active ? 'Active' : 'Completed'}
                       </span>
                     </td>
@@ -171,15 +176,16 @@ export default function Velocity() {
                         completingId === s.id ? (
                           <div className="flex items-center justify-end gap-2">
                             <button onClick={() => handleComplete(s.id)} disabled={saving}
-                              className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white px-3 py-1 rounded text-xs font-medium transition-colors">
+                              className="bg-[#BFFF00] hover:opacity-90 disabled:opacity-50 text-black font-mono font-semibold text-xs px-3 py-1.5 rounded transition-opacity">
                               {saving ? '…' : 'Save'}
                             </button>
-                            <button onClick={() => setCompletingId(null)} className="text-slate-400 text-xs">Cancel</button>
+                            <button onClick={() => setCompletingId(null)}
+                              className="text-[#6e6e6e] hover:text-white text-xs font-mono">Cancel</button>
                           </div>
                         ) : (
                           <button
                             onClick={() => { setCompletingId(s.id); setCompletedPoints(s.completed_points || '') }}
-                            className="text-blue-600 hover:text-blue-800 text-xs font-medium"
+                            className="text-[#BFFF00] hover:opacity-70 text-xs font-mono font-medium"
                           >
                             Mark Complete
                           </button>

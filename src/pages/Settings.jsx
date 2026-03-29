@@ -5,6 +5,15 @@ import { useOnboarding } from '../context/OnboardingContext'
 
 const ROLES = ['Software Engineer Lead', 'Senior Software Engineer', 'Associate Software Engineer']
 
+const AVATAR_COLORS = ['#0D6E6E', '#F59E0B', '#3B82F6', '#E07B54', '#8B5CF6', '#EF4444']
+
+function getInitials(name) {
+  if (!name) return '?'
+  return name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()
+}
+
+const inputClass = "w-full bg-black border border-[#1A1A1A] rounded px-3 h-10 text-sm text-white font-mono placeholder-[#404040] focus:outline-none focus:border-[#BFFF00]"
+
 export default function Settings() {
   const { teamCode } = useParams()
   const { startOnboarding } = useOnboarding()
@@ -12,17 +21,14 @@ export default function Settings() {
   const [members, setMembers] = useState([])
   const [loading, setLoading] = useState(true)
 
-  // Team info
   const [teamName, setTeamName] = useState('')
   const [savingName, setSavingName] = useState(false)
   const [nameSaved, setNameSaved] = useState(false)
 
-  // Defaults
   const [defaults, setDefaults] = useState({ default_story_points: 15, default_focus_factor: 80, default_sprint_length: 14 })
   const [savingDefaults, setSavingDefaults] = useState(false)
   const [defaultsSaved, setDefaultsSaved] = useState(false)
 
-  // Member management
   const [newMemberName, setNewMemberName] = useState('')
   const [newMemberRole, setNewMemberRole] = useState(ROLES[0])
   const [addingMember, setAddingMember] = useState(false)
@@ -31,11 +37,9 @@ export default function Settings() {
   const [editMemberRole, setEditMemberRole] = useState(ROLES[0])
   const [deleteMemberConfirm, setDeleteMemberConfirm] = useState(null)
 
-  // Danger zone
   const [dangerConfirm, setDangerConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
-  // Copy feedback
   const [copied, setCopied] = useState('')
 
   useEffect(() => {
@@ -79,7 +83,6 @@ export default function Settings() {
       default_focus_factor: newFocusFactor,
       default_sprint_length: parseInt(defaults.default_sprint_length, 10),
     }).eq('id', team.id)
-    // Propagate focus_factor to all active sprints so Dashboard reflects the change immediately
     const { data: activeSprints } = await supabase
       .from('sprints').select('id').eq('team_id', team.id).eq('is_active', true)
     if (activeSprints?.length > 0) {
@@ -144,201 +147,216 @@ export default function Settings() {
 
   const shareableUrl = `${window.location.origin}/team/${teamCode}`
 
-  if (loading) return <div className="text-center py-20 text-slate-400">Loading…</div>
-  if (!team) return <div className="text-center py-20 text-slate-400">Team not found.</div>
+  if (loading) return <div className="text-center py-20 text-[#6e6e6e] font-mono">Loading…</div>
+  if (!team) return <div className="text-center py-20 text-[#6e6e6e] font-mono">Team not found.</div>
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Settings</h1>
-        <p className="text-slate-500 text-sm mt-1">Configure your team workspace</p>
+        <h1 className="text-2xl font-semibold text-white">Settings</h1>
+        <p className="text-[#6e6e6e] text-sm font-mono mt-1">Configure your team workspace</p>
       </div>
 
-      {/* Team Information */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-        <h2 className="font-semibold text-slate-800 mb-5">Team Information</h2>
-        <form onSubmit={handleSaveName} className="mb-5">
-          <label className="block text-sm font-medium text-slate-700 mb-1">Team Name</label>
-          <div className="flex gap-3">
-            <input
-              value={teamName}
-              onChange={(e) => setTeamName(e.target.value)}
-              className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <button type="submit" disabled={savingName}
-              className="bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-              {nameSaved ? '✓ Saved' : savingName ? 'Saving…' : 'Save Name'}
-            </button>
-          </div>
-        </form>
+      <div className="flex gap-5 items-start">
+        {/* ── Left column ── */}
+        <div className="flex-1 flex flex-col gap-5 min-w-0">
 
-        <div className="space-y-3">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Team Code</label>
-            <div className="flex gap-3">
-              <input readOnly value={teamCode}
-                className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 font-mono text-slate-600" />
-              <button type="button" onClick={() => copyToClipboard(teamCode, 'code')}
-                className="border border-slate-300 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-                {copied === 'code' ? '✓ Copied' : 'Copy Code'}
-              </button>
+          {/* Team Information */}
+          <div className="bg-[#111111] rounded-lg border border-[#1A1A1A] p-6">
+            <p className="font-mono text-xs text-[#6e6e6e] tracking-[2px] uppercase mb-4">Team Information</p>
+            <form onSubmit={handleSaveName} className="mb-5">
+              <label className="block font-mono text-[10px] text-[#404040] tracking-[1px] uppercase mb-1.5">Team Name</label>
+              <div className="flex gap-3">
+                <input value={teamName} onChange={(e) => setTeamName(e.target.value)} className={inputClass} />
+                <button type="submit" disabled={savingName}
+                  className="bg-[#BFFF00] hover:opacity-90 disabled:opacity-50 text-black font-mono font-semibold text-xs px-4 py-2 rounded transition-opacity whitespace-nowrap">
+                  {nameSaved ? '✓ Saved' : savingName ? 'Saving…' : 'Save Name'}
+                </button>
+              </div>
+            </form>
+            <div>
+              <label className="block font-mono text-[10px] text-[#404040] tracking-[1px] uppercase mb-1.5">Team Code</label>
+              <div className="flex gap-3 items-center">
+                <input readOnly value={teamCode} className={`${inputClass} text-[#999999] cursor-default`} />
+              </div>
             </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Shareable Link</label>
-            <div className="flex gap-3">
+
+          {/* Sprint Defaults */}
+          <div className="bg-[#111111] rounded-lg border border-[#1A1A1A] p-6">
+            <p className="font-mono text-xs text-[#6e6e6e] tracking-[2px] uppercase mb-4">Sprint Defaults</p>
+            <form onSubmit={handleSaveDefaults} className="space-y-4">
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block font-mono text-[10px] text-[#404040] tracking-[1px] uppercase mb-1.5">SP / Member</label>
+                  <input type="number" min="1"
+                    value={defaults.default_story_points}
+                    onChange={(e) => setDefaults((d) => ({ ...d, default_story_points: e.target.value }))}
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className="block font-mono text-[10px] text-[#404040] tracking-[1px] uppercase mb-1.5">Focus Factor %</label>
+                  <input type="number" min="1" max="100"
+                    value={defaults.default_focus_factor}
+                    onChange={(e) => setDefaults((d) => ({ ...d, default_focus_factor: e.target.value }))}
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className="block font-mono text-[10px] text-[#404040] tracking-[1px] uppercase mb-1.5">Sprint Length (days)</label>
+                  <input type="number" min="1"
+                    value={defaults.default_sprint_length}
+                    onChange={(e) => setDefaults((d) => ({ ...d, default_sprint_length: e.target.value }))}
+                    className={inputClass}
+                  />
+                </div>
+              </div>
+              <button type="submit" disabled={savingDefaults}
+                className="bg-[#BFFF00] hover:opacity-90 disabled:opacity-50 text-black font-mono font-semibold text-xs px-5 py-2.5 rounded transition-opacity">
+                {defaultsSaved ? '✓ Saved' : savingDefaults ? 'Saving…' : 'Save Defaults'}
+              </button>
+            </form>
+          </div>
+
+          {/* Team Members */}
+          <div className="bg-[#111111] rounded-lg border border-[#1A1A1A] p-6">
+            <p className="font-mono text-xs text-[#6e6e6e] tracking-[2px] uppercase mb-4">Team Members</p>
+            <form onSubmit={handleAddMember} className="flex gap-3 mb-5">
+              <input
+                value={newMemberName}
+                onChange={(e) => setNewMemberName(e.target.value)}
+                placeholder="Member name"
+                required
+                className="flex-1 bg-black border border-[#1A1A1A] rounded px-3 h-10 text-sm text-white font-mono placeholder-[#404040] focus:outline-none focus:border-[#BFFF00]"
+              />
+              <select
+                value={newMemberRole}
+                onChange={(e) => setNewMemberRole(e.target.value)}
+                className="bg-black border border-[#1A1A1A] rounded px-3 h-10 text-sm text-white font-mono focus:outline-none focus:border-[#BFFF00]"
+              >
+                {ROLES.map((r) => <option key={r}>{r}</option>)}
+              </select>
+              <button type="submit" disabled={addingMember}
+                className="bg-[#BFFF00] hover:opacity-90 disabled:opacity-50 text-black font-mono font-semibold text-xs px-5 py-2 rounded transition-opacity whitespace-nowrap">
+                {addingMember ? 'Adding…' : 'Add'}
+              </button>
+            </form>
+
+            {members.length === 0 ? (
+              <p className="text-[#6e6e6e] font-mono text-sm">No members yet.</p>
+            ) : (
+              <div className="flex flex-col">
+                {members.map((m, idx) => {
+                  const avatarColor = AVATAR_COLORS[idx % AVATAR_COLORS.length]
+                  return (
+                    <div key={m.id} className="flex items-center justify-between py-3 border-t border-[#1A1A1A] first:border-t-0">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-[#1A1A1A] flex items-center justify-center shrink-0">
+                          <span className="font-mono text-xs font-semibold" style={{ color: avatarColor }}>{getInitials(m.name)}</span>
+                        </div>
+                        {editMemberId === m.id ? (
+                          <div className="flex items-center gap-2">
+                            <input
+                              value={editMemberName}
+                              onChange={(e) => setEditMemberName(e.target.value)}
+                              className="bg-black border border-[#BFFF00] rounded px-2 py-1 text-sm text-white font-mono focus:outline-none w-36"
+                            />
+                            <select
+                              value={editMemberRole}
+                              onChange={(e) => setEditMemberRole(e.target.value)}
+                              className="bg-black border border-[#BFFF00] rounded px-2 py-1 text-xs text-white font-mono focus:outline-none"
+                            >
+                              {ROLES.map((r) => <option key={r}>{r}</option>)}
+                            </select>
+                          </div>
+                        ) : (
+                          <div>
+                            <span className="font-medium text-white text-sm">{m.name}</span>
+                            {m.role && <span className="text-[#6e6e6e] text-xs font-mono ml-2">({m.role})</span>}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {editMemberId === m.id ? (
+                          <>
+                            <button onClick={() => handleEditMember(m.id)} className="text-[#BFFF00] hover:opacity-70 text-xs font-mono font-medium">Save</button>
+                            <button onClick={() => setEditMemberId(null)} className="text-[#6e6e6e] hover:text-white text-xs font-mono">Cancel</button>
+                          </>
+                        ) : (
+                          <button onClick={() => { setEditMemberId(m.id); setEditMemberName(m.name); setEditMemberRole(m.role || ROLES[0]) }}
+                            className="text-[#6e6e6e] hover:text-white text-xs font-mono">Edit</button>
+                        )}
+                        {deleteMemberConfirm === m.id ? (
+                          <div className="flex gap-2">
+                            <button onClick={() => handleDeleteMember(m.id)} className="text-red-400 hover:text-red-300 text-xs font-mono font-medium">Confirm</button>
+                            <button onClick={() => setDeleteMemberConfirm(null)} className="text-[#6e6e6e] text-xs font-mono">Cancel</button>
+                          </div>
+                        ) : (
+                          <button onClick={() => setDeleteMemberConfirm(m.id)} className="text-red-500 hover:text-red-400 text-xs font-mono">Remove</button>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── Right column ── */}
+        <div className="w-72 shrink-0 flex flex-col gap-5">
+
+          {/* Share link */}
+          <div className="bg-[#111111] rounded-lg border border-[#1A1A1A] p-6">
+            <p className="font-mono text-xs text-[#6e6e6e] tracking-[2px] uppercase mb-4">Share Your Team</p>
+            <div className="flex gap-2">
               <input readOnly value={shareableUrl}
-                className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 text-slate-600" />
+                className="flex-1 bg-black border border-[#1A1A1A] rounded px-3 h-10 text-xs text-[#999999] font-mono focus:outline-none truncate" />
               <button type="button" onClick={() => copyToClipboard(shareableUrl, 'url')}
-                className="border border-slate-300 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                className="bg-[#BFFF00] hover:opacity-90 text-black font-mono font-semibold text-xs px-3 py-2 rounded transition-opacity whitespace-nowrap">
                 {copied === 'url' ? '✓ Copied' : 'Copy Link'}
               </button>
             </div>
+            <p className="text-[#404040] text-xs font-mono mt-3">Share this link with your team to give them access.</p>
+          </div>
+
+          {/* Setup Guide */}
+          <div className="bg-[#111111] rounded-lg border border-[#1A1A1A] p-6">
+            <p className="font-mono text-xs text-[#6e6e6e] tracking-[2px] uppercase mb-3">Setup Guide</p>
+            <button
+              onClick={startOnboarding}
+              className="w-full border border-[#BFFF00] text-white hover:bg-[#1A1A1A] font-mono text-xs py-2.5 rounded transition-colors"
+            >
+              Show Setup Guide
+            </button>
+            <p className="text-[#404040] text-xs font-mono mt-3">Re-run the onboarding walkthrough.</p>
+          </div>
+
+          {/* Danger Zone */}
+          <div className="bg-[#0D0000] rounded-lg border border-red-900 p-6">
+            <p className="font-mono text-xs text-red-500 tracking-[2px] uppercase mb-3">Danger Zone</p>
+            <p className="text-[#999999] text-sm font-sans mb-4">These actions are irreversible. Please be certain before proceeding.</p>
+            {dangerConfirm ? (
+              <div className="space-y-3">
+                <p className="text-red-400 text-xs font-mono">This will permanently delete all sprints and data for this team.</p>
+                <div className="flex gap-2">
+                  <button onClick={handleDeleteAllSprints} disabled={deleting}
+                    className="bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white font-mono font-semibold text-xs px-4 py-2 rounded transition-colors">
+                    {deleting ? 'Deleting…' : 'Yes, Delete All'}
+                  </button>
+                  <button onClick={() => setDangerConfirm(false)}
+                    className="text-[#6e6e6e] hover:text-white text-xs font-mono py-2">Cancel</button>
+                </div>
+              </div>
+            ) : (
+              <button onClick={() => setDangerConfirm(true)}
+                className="w-full bg-red-500 hover:bg-red-600 text-white font-mono font-semibold text-xs py-2.5 rounded transition-colors">
+                Delete All Sprint Data
+              </button>
+            )}
           </div>
         </div>
-      </div>
-
-      {/* Sprint Defaults */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-        <h2 className="font-semibold text-slate-800 mb-5">Sprint Defaults</h2>
-        <form onSubmit={handleSaveDefaults} className="space-y-4">
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Story Points / Member</label>
-              <input type="number" min="1"
-                value={defaults.default_story_points}
-                onChange={(e) => setDefaults((d) => ({ ...d, default_story_points: e.target.value }))}
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Focus Factor %</label>
-              <input type="number" min="1" max="100"
-                value={defaults.default_focus_factor}
-                onChange={(e) => setDefaults((d) => ({ ...d, default_focus_factor: e.target.value }))}
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Sprint Length (days)</label>
-              <input type="number" min="1"
-                value={defaults.default_sprint_length}
-                onChange={(e) => setDefaults((d) => ({ ...d, default_sprint_length: e.target.value }))}
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-          <button type="submit" disabled={savingDefaults}
-            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white px-5 py-2 rounded-lg text-sm font-medium transition-colors">
-            {defaultsSaved ? '✓ Saved' : savingDefaults ? 'Saving…' : 'Save Defaults'}
-          </button>
-        </form>
-      </div>
-
-      {/* Team Members */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-        <h2 className="font-semibold text-slate-800 mb-5">Team Members</h2>
-        <form onSubmit={handleAddMember} className="flex gap-3 mb-5">
-          <input
-            value={newMemberName}
-            onChange={(e) => setNewMemberName(e.target.value)}
-            placeholder="Member name"
-            required
-            className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <select
-            value={newMemberRole}
-            onChange={(e) => setNewMemberRole(e.target.value)}
-            className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            {ROLES.map((r) => <option key={r}>{r}</option>)}
-          </select>
-          <button type="submit" disabled={addingMember}
-            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white px-5 py-2 rounded-lg text-sm font-medium transition-colors">
-            {addingMember ? 'Adding…' : 'Add Member'}
-          </button>
-        </form>
-
-        {members.length === 0 ? (
-          <p className="text-slate-400 text-sm">No members yet.</p>
-        ) : (
-          <div className="space-y-2">
-            {members.map((m) => (
-              <div key={m.id} className="flex items-center justify-between px-4 py-3 bg-slate-50 rounded-lg">
-                {editMemberId === m.id ? (
-                  <div className="flex items-center gap-2 flex-1">
-                    <input
-                      value={editMemberName}
-                      onChange={(e) => setEditMemberName(e.target.value)}
-                      className="border border-blue-400 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 w-36"
-                    />
-                    <select
-                      value={editMemberRole}
-                      onChange={(e) => setEditMemberRole(e.target.value)}
-                      className="border border-blue-400 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    >
-                      {ROLES.map((r) => <option key={r}>{r}</option>)}
-                    </select>
-                    <button onClick={() => handleEditMember(m.id)} className="text-blue-600 text-xs font-medium">Save</button>
-                    <button onClick={() => setEditMemberId(null)} className="text-slate-400 text-xs">Cancel</button>
-                  </div>
-                ) : (
-                  <div>
-                    <span className="font-medium text-slate-700 text-sm">{m.name}</span>
-                    {m.role && <span className="text-slate-400 text-xs ml-2">({m.role})</span>}
-                  </div>
-                )}
-                {editMemberId !== m.id && (
-                  <div className="flex items-center gap-3">
-                    <button onClick={() => { setEditMemberId(m.id); setEditMemberName(m.name); setEditMemberRole(m.role || ROLES[0]) }}
-                      className="text-blue-500 hover:text-blue-700 text-xs font-medium">Edit</button>
-                    {deleteMemberConfirm === m.id ? (
-                      <div className="flex gap-2">
-                        <button onClick={() => handleDeleteMember(m.id)} className="text-red-600 text-xs font-medium">Confirm</button>
-                        <button onClick={() => setDeleteMemberConfirm(null)} className="text-slate-400 text-xs">Cancel</button>
-                      </div>
-                    ) : (
-                      <button onClick={() => setDeleteMemberConfirm(m.id)} className="text-red-400 hover:text-red-600 text-xs font-medium">Remove</button>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Setup Guide */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-        <h2 className="font-semibold text-slate-800 mb-2">Setup Guide</h2>
-        <p className="text-slate-500 text-sm mb-4">Re-run the onboarding walkthrough to see the key features highlighted.</p>
-        <button
-          onClick={startOnboarding}
-          className="border border-blue-300 text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-        >
-          Show Setup Guide
-        </button>
-      </div>
-
-      {/* Danger Zone */}
-      <div className="bg-white rounded-xl shadow-sm border border-red-200 p-6">
-        <h2 className="font-semibold text-red-700 mb-2">Danger Zone</h2>
-        <p className="text-slate-500 text-sm mb-4">These actions are irreversible. Please be certain.</p>
-        {dangerConfirm ? (
-          <div className="flex items-center gap-3 p-4 bg-red-50 rounded-lg border border-red-200">
-            <p className="text-red-700 text-sm flex-1">This will permanently delete all sprints, leave entries, and availability data for this team. Are you sure?</p>
-            <button onClick={handleDeleteAllSprints} disabled={deleting}
-              className="bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-              {deleting ? 'Deleting…' : 'Yes, Delete All'}
-            </button>
-            <button onClick={() => setDangerConfirm(false)} className="text-slate-500 text-sm">Cancel</button>
-          </div>
-        ) : (
-          <button onClick={() => setDangerConfirm(true)}
-            className="border border-red-300 text-red-600 hover:bg-red-50 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-            Delete All Sprint Data
-          </button>
-        )}
       </div>
     </div>
   )
