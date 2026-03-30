@@ -11,6 +11,7 @@ export default function Velocity() {
   const [completingId, setCompletingId] = useState(null)
   const [completedPoints, setCompletedPoints] = useState('')
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
   const [committedPoints, setCommittedPoints] = useState({})
 
   useEffect(() => {
@@ -41,17 +42,23 @@ export default function Velocity() {
 
   async function handleComplete(sprintId) {
     setSaving(true)
+    setSaveError('')
     const pts = parseInt(completedPoints, 10) || 0
-    const { data } = await supabase
+    const { error } = await supabase
       .from('sprints')
       .update({ is_active: false, completed_points: pts })
       .eq('id', sprintId)
-      .select()
-      .single()
-    if (data) setSprints((s) => s.map((x) => x.id === sprintId ? data : x))
+    setSaving(false)
+    if (error) {
+      setSaveError(`Failed to save: ${error.message}`)
+      return
+    }
+    setSprints((prev) => prev.map((x) =>
+      x.id === sprintId ? { ...x, is_active: false, completed_points: pts } : x
+    ))
+    setCommittedPoints((prev) => ({ ...prev, [sprintId]: prev[sprintId] || pts }))
     setCompletingId(null)
     setCompletedPoints('')
-    setSaving(false)
   }
 
   const completedSprints = sprints.filter((s) => !s.is_active && s.completed_points != null)
@@ -174,13 +181,16 @@ export default function Velocity() {
                     <td className="px-6 py-4 text-right">
                       {s.is_active && (
                         completingId === s.id ? (
-                          <div className="flex items-center justify-end gap-2">
-                            <button onClick={() => handleComplete(s.id)} disabled={saving}
-                              className="bg-[#BFFF00] hover:opacity-90 disabled:opacity-50 text-black font-mono font-semibold text-xs px-3 py-1.5 rounded transition-opacity">
-                              {saving ? '…' : 'Save'}
-                            </button>
-                            <button onClick={() => setCompletingId(null)}
-                              className="text-[#6e6e6e] hover:text-white text-xs font-mono">Cancel</button>
+                          <div className="flex flex-col items-end gap-1">
+                            <div className="flex items-center gap-2">
+                              <button onClick={() => handleComplete(s.id)} disabled={saving}
+                                className="bg-[#BFFF00] hover:opacity-90 disabled:opacity-50 text-black font-mono font-semibold text-xs px-3 py-1.5 rounded transition-opacity">
+                                {saving ? '…' : 'Save'}
+                              </button>
+                              <button onClick={() => { setCompletingId(null); setSaveError('') }}
+                                className="text-[#6e6e6e] hover:text-white text-xs font-mono">Cancel</button>
+                            </div>
+                            {saveError && <p className="text-red-400 text-[10px] font-mono">{saveError}</p>}
                           </div>
                         ) : (
                           <button

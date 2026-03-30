@@ -21,6 +21,8 @@ CREATE TABLE IF NOT EXISTS member_leave (
   working_days INTEGER NOT NULL DEFAULT 0,
   created_at   TIMESTAMPTZ DEFAULT NOW()
 );
+ALTER TABLE member_leave ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public access" ON member_leave FOR ALL USING (true) WITH CHECK (true);
 
 -- 4. Public holidays (shared across all team members per sprint)
 CREATE TABLE IF NOT EXISTS public_holidays (
@@ -33,6 +35,8 @@ CREATE TABLE IF NOT EXISTS public_holidays (
   working_days INTEGER NOT NULL DEFAULT 0,
   created_at   TIMESTAMPTZ DEFAULT NOW()
 );
+ALTER TABLE public_holidays ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public access" ON public_holidays FOR ALL USING (true) WITH CHECK (true);
 
 -- 5. Allocation percentage per team member (default 100%)
 ALTER TABLE team_members
@@ -41,3 +45,7 @@ ALTER TABLE team_members
 -- 6. Track onboarding completion per team
 ALTER TABLE teams
   ADD COLUMN IF NOT EXISTS onboarding_completed BOOLEAN DEFAULT false;
+
+-- 7. Store completed story points when a sprint is marked done
+ALTER TABLE sprints
+  ADD COLUMN IF NOT EXISTS completed_points INTEGER;

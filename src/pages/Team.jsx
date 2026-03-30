@@ -61,7 +61,7 @@ export default function Team() {
 
       const [{ data: membersData }, { data: sprintsData }] = await Promise.all([
         supabase.from('team_members').select('*').eq('team_id', teamData.id).order('created_at'),
-        supabase.from('sprints').select('*').eq('team_id', teamData.id).eq('is_active', true).limit(1),
+        supabase.from('sprints').select('*').eq('team_id', teamData.id).eq('is_active', true).order('created_at', { ascending: false }).limit(1),
       ])
       if (membersData) setMembers(membersData)
       const sprint = sprintsData?.[0] || null

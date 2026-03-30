@@ -71,13 +71,15 @@ export default function Dashboard() {
       })
   }, [teamCode]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const loadSprints = useCallback(async (teamId) => {
+  const loadSprints = useCallback(async (teamId, selectLatest = false) => {
     const { data } = await supabase.from('sprints').select('*').eq('team_id', teamId).order('created_at')
     if (data) {
       setSprints(data)
       setActiveSprint((prev) => {
+        if (selectLatest) return data[data.length - 1] || null
         if (prev) return data.find((s) => s.id === prev.id) || data[data.length - 1] || null
-        return data.find((s) => s.is_active) || data[data.length - 1] || null
+        const activeOnes = data.filter((s) => s.is_active)
+        return (activeOnes.length > 0 ? activeOnes[activeOnes.length - 1] : null) || data[data.length - 1] || null
       })
     }
   }, [])
@@ -178,7 +180,7 @@ export default function Dashboard() {
     if (!error) {
       setShowForm(false)
       setForm({ ...defaultForm, story_points_per_member: team.default_story_points || 15, focus_factor: team.default_focus_factor || 80 })
-      loadSprints(team.id)
+      loadSprints(team.id, true)
     }
   }
 
@@ -192,8 +194,11 @@ export default function Dashboard() {
   const focusFactor = activeSprint?.focus_factor || 80
   const sprintStart = activeSprint?.start_date || null
   const sprintEnd   = activeSprint?.end_date   || null
+  const hasDates = !!(sprintStart && sprintEnd)
   const publicHolidayDays = publicHolidays.reduce(
-    (sum, h) => sum + calcOverlapDays(h.start_date, h.end_date, sprintStart, sprintEnd),
+    (sum, h) => sum + (hasDates
+      ? calcOverlapDays(h.start_date, h.end_date, sprintStart, sprintEnd)
+      : (h.working_days || 0)),
     0
   )
 
@@ -205,7 +210,9 @@ export default function Dashboard() {
   members.forEach((m) => {
     const individualLeaveDays = leaveEntries
       .filter((l) => l.member_id === m.id)
-      .reduce((sum, l) => sum + calcOverlapDays(l.start_date, l.end_date, sprintStart, sprintEnd), 0)
+      .reduce((sum, l) => sum + (hasDates
+        ? calcOverlapDays(l.start_date, l.end_date, sprintStart, sprintEnd)
+        : (l.working_days || 0)), 0)
     memberCapacities[m.id] = getMemberCapacity(
       basePoints, sprintWorkingDays, focusFactor,
       individualLeaveDays, publicHolidayDays,
