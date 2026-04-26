@@ -118,16 +118,34 @@ export default function CarryoverReview({ team, members }) {
     await supabase.from('sprint_carryover').delete().eq('sprint_id', activeSprint.id)
     await supabase.from('sprint_carryover').insert(rows)
 
-    // Update sprint_availability.carry_sp per member
+    // Update carry_sp in sprint_availability — check existing rows first
+    const { data: existingAvail } = await supabase
+      .from('sprint_availability')
+      .select('id, member_id')
+      .eq('sprint_id', activeSprint.id)
+
     await Promise.all(
-      members.map((m) =>
-        supabase
-          .from('sprint_availability')
-          .upsert(
-            { sprint_id: activeSprint.id, member_id: m.id, carry_sp: getCarrySP(m.id) },
-            { onConflict: 'sprint_id,member_id' }
-          )
-      )
+      members.map((m) => {
+        const carrySP = getCarrySP(m.id)
+        const existing = existingAvail?.find((a) => a.member_id === m.id)
+        if (existing) {
+          return supabase
+            .from('sprint_availability')
+            .update({ carry_sp: carrySP })
+            .eq('id', existing.id)
+        } else {
+          return supabase
+            .from('sprint_availability')
+            .insert({
+              sprint_id: activeSprint.id,
+              member_id: m.id,
+              carry_sp: carrySP,
+              assigned_points: 0,
+              availability_percentage: 100,
+              leave_days: 0,
+            })
+        }
+      })
     )
 
     setConfirming(false)
