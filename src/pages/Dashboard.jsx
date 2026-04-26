@@ -175,7 +175,11 @@ export default function Dashboard() {
     e.preventDefault()
     if (!team) return
     setSaving(true)
-    const { error } = await supabase.from('sprints').insert({
+
+    // Capture the current sprint's id before creating the new one
+    const prevSprintId = activeSprint?.id || null
+
+    const { data: newSprint, error } = await supabase.from('sprints').insert({
       team_id: team.id,
       name: form.name,
       goal: form.goal,
@@ -184,7 +188,32 @@ export default function Dashboard() {
       story_points_per_member: parseInt(form.story_points_per_member, 10),
       focus_factor: parseInt(form.focus_factor, 10),
       is_active: true,
-    })
+    }).select().single()
+
+    if (!error && newSprint && prevSprintId && members.length > 0) {
+      // Pull carry_sp from the previous sprint's availability
+      const { data: prevAvail } = await supabase
+        .from('sprint_availability')
+        .select('member_id, carry_sp')
+        .eq('sprint_id', prevSprintId)
+
+      if (prevAvail?.length > 0) {
+        const rows = prevAvail
+          .filter((a) => Number(a.carry_sp) > 0)
+          .map((a) => ({
+            sprint_id: newSprint.id,
+            member_id: a.member_id,
+            carry_sp: Number(a.carry_sp),
+            assigned_points: 0,
+            availability_percentage: 100,
+            leave_days: 0,
+          }))
+        if (rows.length > 0) {
+          await supabase.from('sprint_availability').insert(rows)
+        }
+      }
+    }
+
     setSaving(false)
     if (!error) {
       capture('sprint_created', {

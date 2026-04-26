@@ -68,7 +68,7 @@ export default function TeamCapacityTable({
   const statusLabel = sprintStatus === 'OPTIMAL' ? 'Optimal' : sprintStatus === 'OVERCOMMITTED' ? 'Overcommitted' : 'Underutilized'
 
   return (
-    <div className="bg-[#111111] rounded-lg border border-[#1A1A1A] overflow-hidden">
+    <div className="bg-[#111111] rounded-lg border border-[#1A1A1A]">
       <div className="px-6 py-4 border-b border-[#1A1A1A] flex items-center justify-between">
         <h3 className="text-white font-semibold text-sm">Team Capacity Breakdown</h3>
         {sprintStatus && (
