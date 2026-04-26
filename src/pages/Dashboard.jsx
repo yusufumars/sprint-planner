@@ -248,7 +248,7 @@ export default function Dashboard() {
   const totalCarry = members.reduce((sum, m) => sum + (carryPoints[m.id] || 0), 0)
   const remainingCapacity = Math.round(effectiveCapacity - totalAssigned - totalCarry)
   const totalAvailForNew = members.reduce(
-    (sum, m) => sum + ((memberCapacities[m.id]?.targetSP || 0) - (carryPoints[m.id] || 0)),
+    (sum, m) => sum + Math.max(0, (memberCapacities[m.id]?.targetSP || 0) - (carryPoints[m.id] || 0)),
     0
   )
 
@@ -397,9 +397,9 @@ export default function Dashboard() {
             <CapacityCard
               label="Available for New Work"
               value={totalAvailForNew}
-              valueColor={totalAvailForNew < 0 ? '#FF4444' : null}
-              sub={totalAvailForNew < 0
-                ? 'Team is over capacity — review carryover'
+              valueColor={totalAvailForNew <= 0 ? '#FF4444' : null}
+              sub={totalAvailForNew <= 0
+                ? 'Team is over capacity from carryover'
                 : 'Across all members for Sprint B'
               }
             />

@@ -83,25 +83,30 @@ export default function TeamCapacityTable({
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
+            {/* Column order: Member | Alloc | Leave | Adjusted SP | Carry SP | TARGET SP | Assigned SP | Utilization */}
             <tr className="bg-black text-[#404040] font-mono text-[10px] tracking-[1px] uppercase">
               <th className="text-left px-6 py-3">Member</th>
               <th className="text-center px-4 py-3">Alloc</th>
               <th className="text-right px-4 py-3">Leave</th>
-              <th className="text-right px-4 py-3">Adjusted</th>
-              <th className="text-right px-4 py-3 text-[#BFFF00]">
+              <th className="text-right px-4 py-3">Adjusted SP</th>
+              <th className="text-right px-4 py-3">
                 <span className="inline-flex items-center">
+                  Carry SP
+                  <InfoTooltip text="Carry SP = Remaining effort from Sprint A carryover. Enter this manually from the Carryover Review screen." />
+                </span>
+              </th>
+              <th className="text-center px-4 py-3 text-[#CCFF00] min-w-[140px]">
+                <span className="inline-flex items-center justify-center">
                   Target SP
-                  <InfoTooltip text="Target SP = Adjusted SP × Focus Factor. This is total capacity including carryover." />
+                  <InfoTooltip text="Target SP = (Adjusted SP × Focus Factor) − Carry SP. This is how many new story points to assign in Jira." />
                 </span>
               </th>
-              <th className="text-right px-4 py-3 text-[#6e6e6e]">Carry SP</th>
-              <th className="text-center px-4 py-3 text-white min-w-[140px]">
-                <span className="inline-flex items-center">
-                  Available for New Work
-                  <InfoTooltip text="Available = Target SP − Carry SP. Assign this many points in Jira for Sprint B." />
+              <th className="text-center px-4 py-3" id="onboarding-assigned-sp-col">
+                <span className="inline-flex items-center justify-center">
+                  Assigned SP
+                  <InfoTooltip text="Enter the actual story points assigned in Jira for new Sprint B tickets only." />
                 </span>
               </th>
-              <th className="text-center px-4 py-3" id="onboarding-assigned-sp-col">Actual SP</th>
               <th className="text-right px-4 py-3 min-w-[180px]">Utilization</th>
             </tr>
           </thead>
@@ -113,24 +118,27 @@ export default function TeamCapacityTable({
               }
               const assigned = assignedPoints[m.id] ?? 0
               const carry = carryPoints[m.id] ?? cap.carrySP ?? 0
-              const avail = cap.targetSP - carry
+              // Net target = focus-adjusted capacity minus carryover
+              const netTarget = cap.targetSP - carry
               const alloc = m.allocation_percentage || 100
               const avatarColor = AVATAR_COLORS[idx % AVATAR_COLORS.length]
-              const noCarryEntered = carry === 0
-              const exceedsAvail = assigned > 0 && avail > 0 && assigned > avail
 
-              // Available for New Work colour logic
-              let availColor, availLabel
-              if (avail < 0) {
-                availColor = '#FF4444'
-                availLabel = 'Over capacity'
-              } else if (avail === 0) {
-                availColor = '#FFAA00'
-                availLabel = 'Full'
+              // TARGET SP colour and label
+              let targetColor, targetLabel
+              if (netTarget < 0) {
+                targetColor = '#FF4444'
+                targetLabel = 'Over capacity — no new tickets'
+              } else if (netTarget === 0) {
+                targetColor = '#FFAA00'
+                targetLabel = 'Full capacity'
               } else {
-                availColor = '#CCFF00'
-                availLabel = null
+                targetColor = '#CCFF00'
+                targetLabel = null
               }
+
+              // Assigned SP warnings
+              const overCapacity = netTarget < 0
+              const exceedsTarget = !overCapacity && assigned > 0 && assigned > netTarget
 
               return (
                 <tr key={m.id} className="border-t border-[#1A1A1A] hover:bg-[#0a0a0a]">
@@ -177,41 +185,33 @@ export default function TeamCapacityTable({
                   {/* Adjusted SP */}
                   <td className="px-4 py-4 text-right font-mono text-sm text-white">{cap.adjustedSP}</td>
 
-                  {/* Target SP */}
-                  <td className="px-4 py-4 text-right">
-                    <span className="font-mono text-sm font-semibold text-[#BFFF00]">{cap.targetSP}</span>
-                  </td>
-
                   {/* Carry SP */}
                   <td className="px-4 py-4 text-right">
                     <span className="font-mono text-sm text-[#6e6e6e]">{carry}</span>
                   </td>
 
-                  {/* Available for New Work */}
+                  {/* TARGET SP — net target, most prominent column */}
                   <td className="px-4 py-4 text-center">
-                    <div
-                      className={`inline-flex flex-col items-center rounded px-2 py-1 ${
-                        noCarryEntered ? 'border border-dashed border-[#2A2A2A]' : ''
-                      }`}
-                    >
+                    <div className="inline-flex flex-col items-center">
                       <span
                         className="font-mono font-bold leading-none"
-                        style={{ color: availColor, fontSize: '1rem' }}
+                        style={{ color: targetColor, fontSize: '1.05rem' }}
                       >
-                        {avail}
+                        {netTarget}
                       </span>
-                      {availLabel && (
-                        <span className="font-mono text-[9px] mt-0.5" style={{ color: availColor }}>
-                          {availLabel}
+                      {targetLabel ? (
+                        <span className="font-mono text-[9px] mt-1 leading-tight text-center" style={{ color: targetColor }}>
+                          {targetLabel}
+                        </span>
+                      ) : (
+                        <span className="font-mono text-[9px] mt-1" style={{ color: '#555555' }}>
+                          For new tickets
                         </span>
                       )}
-                      <span className="text-[#404040] font-mono text-[9px] mt-0.5">
-                        {noCarryEntered ? 'No carryover yet' : 'For new tickets'}
-                      </span>
                     </div>
                   </td>
 
-                  {/* Actual SP */}
+                  {/* Assigned SP */}
                   <td className="px-4 py-4 text-center">
                     <div className="flex flex-col items-center gap-1">
                       <input
@@ -219,20 +219,25 @@ export default function TeamCapacityTable({
                         min="0"
                         step="1"
                         value={assigned === 0 && !assignedPoints[m.id] ? '' : assigned}
-                        placeholder={avail > 0 ? `≤ ${avail}` : '0'}
+                        placeholder={overCapacity ? '0 — over capacity' : `≤ ${netTarget}`}
                         onChange={(e) => onAssignedChange(m.id, parseFloat(e.target.value) || 0)}
                         onBlur={(e) => onAssignedBlur(m.id, parseFloat(e.target.value) || 0)}
-                        className="w-16 text-center bg-[#1A1A1A] border border-[#2A2A2A] rounded px-2 py-1.5 text-sm font-mono text-white focus:outline-none focus:border-[#BFFF00]"
+                        className="w-20 text-center bg-[#1A1A1A] border border-[#2A2A2A] rounded px-2 py-1.5 text-sm font-mono text-white focus:outline-none focus:border-[#BFFF00]"
                       />
-                      {exceedsAvail && (
-                        <span className="text-[#FFAA00] font-mono text-[9px] leading-tight text-center">
-                          Exceeds available
+                      {exceedsTarget && (
+                        <span className="text-[#FFAA00] font-mono text-[9px] leading-tight">
+                          Exceeds target
+                        </span>
+                      )}
+                      {overCapacity && assigned > 0 && (
+                        <span className="text-[#FF4444] font-mono text-[9px] leading-tight text-center">
+                          Member is already over capacity
                         </span>
                       )}
                     </div>
                   </td>
 
-                  {/* Utilization */}
+                  {/* Utilization — Carry SP + Assigned SP ÷ Adjusted SP */}
                   <td className="px-4 py-4">
                     <div className="flex items-center gap-2 justify-end">
                       <div className="w-20 bg-[#2A2A2A] rounded-full h-1.5">
