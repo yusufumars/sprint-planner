@@ -2,6 +2,8 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import LeaveManagement from '../components/LeaveManagement'
+import CarryoverReview from '../components/CarryoverReview'
+import { capture } from '../lib/analytics'
 
 const ROLES = ['Software Engineer Lead', 'Senior Software Engineer', 'Associate Software Engineer']
 const ALLOCATION_OPTIONS = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
@@ -85,6 +87,7 @@ export default function Team() {
     if (error) {
       setAddError(`Failed to add member: ${error.message}`)
     } else if (data) {
+      capture('member_added', { team_code: teamCode, role: newRole })
       setMembers((m) => [...m, data])
       setNewName('')
       setNewRole(ROLES[0])
@@ -123,8 +126,9 @@ export default function Team() {
   if (!team) return <div className="text-center py-20 text-[#6e6e6e] font-mono">Team not found.</div>
 
   const tabs = [
-    { key: 'members', label: `Members` },
+    { key: 'members', label: 'Members' },
     { key: 'leave', label: 'Leave & Holidays', id: 'onboarding-leave-tab' },
+    { key: 'carryover', label: 'Carryover Review' },
   ]
 
   return (
@@ -306,6 +310,11 @@ export default function Team() {
           publicHolidays={publicHolidays}
           onLeaveChange={() => activeSprint && loadLeaveData(activeSprint.id)}
         />
+      )}
+
+      {/* ── Tab: Carryover Review ── */}
+      {activeTab === 'carryover' && (
+        <CarryoverReview team={team} members={members} />
       )}
     </div>
   )

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useOnboarding } from '../context/OnboardingContext'
+import SwimLaneConfig from '../components/SwimLaneConfig'
 
 const ROLES = ['Software Engineer Lead', 'Senior Software Engineer', 'Associate Software Engineer']
 
@@ -41,6 +42,7 @@ export default function Settings() {
   const [deleting, setDeleting] = useState(false)
 
   const [copied, setCopied] = useState('')
+  const [activeTab, setActiveTab] = useState('general')
 
   useEffect(() => {
     async function load() {
@@ -157,6 +159,35 @@ export default function Settings() {
         <p className="text-[#6e6e6e] text-sm font-mono mt-1">Configure your team workspace</p>
       </div>
 
+      {/* Tabs */}
+      <div className="flex bg-[#111111] border border-[#1A1A1A] rounded p-1 gap-1 w-fit">
+        {[
+          { key: 'general', label: 'General' },
+          { key: 'swimlanes', label: 'Swim Lane Config' },
+        ].map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setActiveTab(t.key)}
+            className={`px-4 py-2 text-xs font-mono rounded transition-colors ${
+              activeTab === t.key
+                ? 'bg-[#BFFF00] text-black font-semibold'
+                : 'text-[#6e6e6e] hover:text-white'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Tab: Swim Lane Config ── */}
+      {activeTab === 'swimlanes' && (
+        <div className="bg-[#111111] rounded-lg border border-[#1A1A1A] p-6">
+          <SwimLaneConfig teamId={team.id} />
+        </div>
+      )}
+
+      {/* ── Tab: General ── */}
+      {activeTab === 'general' && (
       <div className="flex gap-5 items-start">
         {/* ── Left column ── */}
         <div className="flex-1 flex flex-col gap-5 min-w-0">
@@ -358,6 +389,7 @@ export default function Settings() {
           </div>
         </div>
       </div>
+      )} {/* end General tab */}
     </div>
   )
 }

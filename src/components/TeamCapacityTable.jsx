@@ -33,10 +33,17 @@ function getInitials(name) {
 
 const AVATAR_COLORS = ['#0D6E6E', '#F59E0B', '#3B82F6', '#E07B54', '#8B5CF6', '#EF4444']
 
+function availSpColor(avail) {
+  if (avail < 0) return '#FF4444'
+  if (avail === 0) return '#FFAA00'
+  return '#CCFF00'
+}
+
 export default function TeamCapacityTable({
   members,
   memberCapacities,
   assignedPoints,
+  carryPoints = {},
   basePoints,
   focusFactor,
   onAssignedChange,
@@ -77,7 +84,9 @@ export default function TeamCapacityTable({
               <th className="text-right px-4 py-3">Leave</th>
               <th className="text-right px-4 py-3">Adjusted</th>
               <th className="text-right px-4 py-3 text-[#BFFF00]">Target SP</th>
-              <th className="text-center px-4 py-3" id="onboarding-assigned-sp-col">Assigned</th>
+              <th className="text-right px-4 py-3 text-[#6e6e6e]">Carry SP</th>
+              <th className="text-right px-4 py-3 text-[#6e6e6e]">Avail SP</th>
+              <th className="text-center px-4 py-3" id="onboarding-assigned-sp-col">New SP</th>
               <th className="text-right px-4 py-3 min-w-[180px]">Utilization</th>
             </tr>
           </thead>
@@ -85,9 +94,11 @@ export default function TeamCapacityTable({
             {members.map((m, idx) => {
               const cap = memberCapacities[m.id] || {
                 adjustedSP: 0, targetSP: 0, totalLeaveDays: 0,
-                utilizationPct: 0, status: 'UNDERUTILIZED',
+                utilizationPct: 0, status: 'UNDERUTILIZED', carrySP: 0,
               }
               const assigned = assignedPoints[m.id] ?? 0
+              const carry = carryPoints[m.id] ?? cap.carrySP ?? 0
+              const avail = cap.targetSP - carry
               const alloc = m.allocation_percentage || 100
               const avatarColor = AVATAR_COLORS[idx % AVATAR_COLORS.length]
 
@@ -141,7 +152,19 @@ export default function TeamCapacityTable({
                     <span className="font-mono text-sm font-semibold text-[#BFFF00]">{cap.targetSP}</span>
                   </td>
 
-                  {/* Assigned SP */}
+                  {/* Carry SP */}
+                  <td className="px-4 py-4 text-right">
+                    <span className="font-mono text-sm text-[#6e6e6e]">{carry}</span>
+                  </td>
+
+                  {/* Avail SP */}
+                  <td className="px-4 py-4 text-right">
+                    <span className="font-mono text-sm font-semibold" style={{ color: availSpColor(avail) }}>
+                      {avail}
+                    </span>
+                  </td>
+
+                  {/* New SP */}
                   <td className="px-4 py-4 text-center">
                     <input
                       type="number"
