@@ -247,6 +247,10 @@ export default function Dashboard() {
   const totalAssigned = members.reduce((sum, m) => sum + (assignedPoints[m.id] || 0), 0)
   const totalCarry = members.reduce((sum, m) => sum + (carryPoints[m.id] || 0), 0)
   const remainingCapacity = Math.round(effectiveCapacity - totalAssigned - totalCarry)
+  const totalAvailForNew = members.reduce(
+    (sum, m) => sum + ((memberCapacities[m.id]?.targetSP || 0) - (carryPoints[m.id] || 0)),
+    0
+  )
 
   const sprintUtilPct = effectiveCapacity > 0 ? Math.round((totalAssigned / effectiveCapacity) * 100) : 0
   const sprintStatus = getSprintStatus(totalAssigned, effectiveCapacity)
@@ -391,9 +395,13 @@ export default function Dashboard() {
               sub={`${sprintUtilPct}% utilized`}
             />
             <CapacityCard
-              label="Remaining SP"
-              value={remainingCapacity}
-              sub="Available capacity"
+              label="Available for New Work"
+              value={totalAvailForNew}
+              valueColor={totalAvailForNew < 0 ? '#FF4444' : null}
+              sub={totalAvailForNew < 0
+                ? 'Team is over capacity — review carryover'
+                : 'Across all members for Sprint B'
+              }
             />
           </div>
 
