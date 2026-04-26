@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { calcWorkingDays } from '../lib/utils'
+import { capture } from '../lib/analytics'
 
 const LEAVE_TYPES = ['Annual Leave', 'Maternity Leave', 'Sick Leave', 'Study Leave']
 
@@ -60,6 +61,7 @@ export default function LeaveManagement({ team, sprint, members, leaveEntries, p
     if (error) {
       setLeaveError(`Failed to save: ${error.message}`)
     } else {
+      capture('leave_added', { team_code: team.team_code, leave_type: leaveForm.leave_type, working_days: wdays })
       setLeaveForm(emptyLeaveForm)
       setShowLeaveForm(false)
       onLeaveChange()
@@ -90,6 +92,7 @@ export default function LeaveManagement({ team, sprint, members, leaveEntries, p
     if (error) {
       setHolidayError(`Failed to save: ${error.message}`)
     } else {
+      capture('public_holiday_added', { team_code: team.team_code, name: holidayForm.name, working_days: wdays })
       setHolidayForm(emptyHolidayForm)
       setShowHolidayForm(false)
       onLeaveChange()

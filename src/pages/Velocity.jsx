@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import VelocityChart from '../components/VelocityChart'
+import { capture } from '../lib/analytics'
 
 export default function Velocity() {
   const { teamCode } = useParams()
@@ -53,6 +54,13 @@ export default function Velocity() {
       setSaveError(`Failed to save: ${error.message}`)
       return
     }
+    const sprint = sprints.find((s) => s.id === sprintId)
+    capture('sprint_completed', {
+      team_code: teamCode,
+      sprint_name: sprint?.name,
+      completed_points: pts,
+      committed_points: committedPoints[sprintId] || 0,
+    })
     setSprints((prev) => prev.map((x) =>
       x.id === sprintId ? { ...x, is_active: false, completed_points: pts } : x
     ))
