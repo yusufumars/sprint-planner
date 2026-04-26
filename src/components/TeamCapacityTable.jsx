@@ -37,7 +37,7 @@ function InfoTooltip({ text }) {
   return (
     <span className="relative group cursor-help inline-flex items-center ml-1">
       <span className="text-[#404040] border border-[#404040] rounded-full text-[8px] w-3.5 h-3.5 flex items-center justify-center font-bold leading-none">i</span>
-      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-52 bg-[#1A1A1A] border border-[#2A2A2A] text-[#999999] text-[10px] font-mono normal-case tracking-normal rounded p-2 invisible group-hover:visible z-20 text-left leading-relaxed whitespace-normal pointer-events-none">
+      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-52 bg-[#1A1A1A] border border-[#2A2A2A] text-[#999999] text-[10px] font-mono normal-case tracking-normal rounded p-2 invisible group-hover:visible z-50 text-left leading-relaxed whitespace-normal pointer-events-none">
         {text}
       </span>
     </span>
@@ -82,7 +82,7 @@ export default function TeamCapacityTable({
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead>
+          <thead className="relative z-10">
             {/* Column order: Member | Alloc | Leave | Adjusted SP | Carry SP | TARGET SP | Assigned SP | Utilization */}
             <tr className="bg-black text-[#404040] font-mono text-[10px] tracking-[1px] uppercase">
               <th className="text-left px-6 py-3">Member</th>
