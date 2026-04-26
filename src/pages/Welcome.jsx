@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { capture } from '../lib/analytics'
 
 function generateTeamCode() {
   const chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
@@ -35,6 +36,7 @@ export default function Welcome() {
       setCreating(false)
       return
     }
+    capture('team_created', { team_name: teamName.trim(), team_code: code })
     navigate(`/team/${code}`)
   }
 

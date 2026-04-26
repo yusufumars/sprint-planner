@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { capture } from '../lib/analytics'
 import { calcWorkingDays, calcOverlapDays } from '../lib/utils'
 import SprintSelector from '../components/SprintSelector'
 import CapacityCard from '../components/CapacityCard'
@@ -9,21 +10,22 @@ import { useOnboarding } from '../context/OnboardingContext'
 
 // ── Capacity helpers ──────────────────────────────────────────────────────────
 
-function getMemberCapacity(basePoints, sprintWorkingDays, focusFactor, individualLeaveDays, publicHolidayDays, assignedSP, allocationPct) {
+function getMemberCapacity(basePoints, sprintWorkingDays, focusFactor, individualLeaveDays, publicHolidayDays, assignedSP, allocationPct, carrySP = 0) {
   const totalLeaveDays = individualLeaveDays + publicHolidayDays
   const safeDays = Math.max(sprintWorkingDays, 1)
   const alloc = (allocationPct || 100) / 100
   const rawAdjusted = Math.max(0, basePoints * ((safeDays - totalLeaveDays) / safeDays) * alloc)
   const adjustedSP = Math.round(rawAdjusted)
   const targetSP = Math.round(adjustedSP * focusFactor / 100)
-  const utilizationPct = adjustedSP > 0 ? Math.round((assignedSP / adjustedSP) * 100) : 0
+  const totalCommitted = assignedSP + carrySP
+  const utilizationPct = adjustedSP > 0 ? Math.round((totalCommitted / adjustedSP) * 100) : 0
 
   let status
-  if (assignedSP > adjustedSP) status = 'OVERUTILIZED'
-  else if (assignedSP >= targetSP * 0.95) status = 'GOOD'
+  if (totalCommitted > adjustedSP) status = 'OVERUTILIZED'
+  else if (totalCommitted >= targetSP * 0.95) status = 'GOOD'
   else status = 'UNDERUTILIZED'
 
-  return { totalLeaveDays, adjustedSP, targetSP, utilizationPct, status }
+  return { totalLeaveDays, adjustedSP, targetSP, utilizationPct, status, carrySP }
 }
 
 function getSprintStatus(totalAssigned, effectiveCapacity) {
@@ -111,8 +113,14 @@ export default function Dashboard() {
       supabase.from('public_holidays').select('*').eq('sprint_id', sprint.id),
     ])
     const avMap = {}
-    memberList.forEach((m) => { avMap[m.id] = { assigned_points: 0 } })
-    avData?.forEach((a) => { avMap[a.member_id] = { id: a.id, assigned_points: Number(a.assigned_points) || 0 } })
+    memberList.forEach((m) => { avMap[m.id] = { assigned_points: 0, carry_sp: 0 } })
+    avData?.forEach((a) => {
+      avMap[a.member_id] = {
+        id: a.id,
+        assigned_points: Number(a.assigned_points) || 0,
+        carry_sp: Number(a.carry_sp) || 0,
+      }
+    })
     setSprintAvailability(avMap)
     setLeaveEntries(leaveData || [])
     setPublicHolidays(holidayData || [])
@@ -135,6 +143,7 @@ export default function Dashboard() {
   async function handleAssignedBlur(memberId, rawValue) {
     const value = Math.round(rawValue) || 0
     handleAssignedChange(memberId, value)
+    capture('assigned_sp_entered', { team_code: teamCode, assigned_points: value })
     const existing = sprintAvailability[memberId]
     if (existing?.id) {
       await supabase.from('sprint_availability').update({ assigned_points: value }).eq('id', existing.id)
@@ -166,7 +175,11 @@ export default function Dashboard() {
     e.preventDefault()
     if (!team) return
     setSaving(true)
-    const { error } = await supabase.from('sprints').insert({
+
+    // Capture the current sprint's id before creating the new one
+    const prevSprintId = activeSprint?.id || null
+
+    const { data: newSprint, error } = await supabase.from('sprints').insert({
       team_id: team.id,
       name: form.name,
       goal: form.goal,
@@ -175,9 +188,40 @@ export default function Dashboard() {
       story_points_per_member: parseInt(form.story_points_per_member, 10),
       focus_factor: parseInt(form.focus_factor, 10),
       is_active: true,
-    })
+    }).select().single()
+
+    if (!error && newSprint && prevSprintId && members.length > 0) {
+      // Pull carry_sp from the previous sprint's availability
+      const { data: prevAvail } = await supabase
+        .from('sprint_availability')
+        .select('member_id, carry_sp')
+        .eq('sprint_id', prevSprintId)
+
+      if (prevAvail?.length > 0) {
+        const rows = prevAvail
+          .filter((a) => Number(a.carry_sp) > 0)
+          .map((a) => ({
+            sprint_id: newSprint.id,
+            member_id: a.member_id,
+            carry_sp: Number(a.carry_sp),
+            assigned_points: 0,
+            availability_percentage: 100,
+            leave_days: 0,
+          }))
+        if (rows.length > 0) {
+          await supabase.from('sprint_availability').insert(rows)
+        }
+      }
+    }
+
     setSaving(false)
     if (!error) {
+      capture('sprint_created', {
+        team_code: teamCode,
+        sprint_name: form.name,
+        story_points_per_member: parseInt(form.story_points_per_member, 10),
+        focus_factor: parseInt(form.focus_factor, 10),
+      })
       setShowForm(false)
       setForm({ ...defaultForm, story_points_per_member: team.default_story_points || 15, focus_factor: team.default_focus_factor || 80 })
       loadSprints(team.id, true)
@@ -206,6 +250,10 @@ export default function Dashboard() {
     Object.entries(sprintAvailability).map(([mid, av]) => [mid, av.assigned_points || 0])
   )
 
+  const carryPoints = Object.fromEntries(
+    Object.entries(sprintAvailability).map(([mid, av]) => [mid, av.carry_sp || 0])
+  )
+
   const memberCapacities = {}
   members.forEach((m) => {
     const individualLeaveDays = leaveEntries
@@ -217,7 +265,8 @@ export default function Dashboard() {
       basePoints, sprintWorkingDays, focusFactor,
       individualLeaveDays, publicHolidayDays,
       assignedPoints[m.id] || 0,
-      m.allocation_percentage || 100
+      m.allocation_percentage || 100,
+      carryPoints[m.id] || 0
     )
   })
 
@@ -225,7 +274,12 @@ export default function Dashboard() {
   const totalAdjustedSP = members.reduce((sum, m) => sum + (memberCapacities[m.id]?.adjustedSP || 0), 0)
   const effectiveCapacity = Math.round(totalAdjustedSP * focusFactor / 100)
   const totalAssigned = members.reduce((sum, m) => sum + (assignedPoints[m.id] || 0), 0)
-  const remainingCapacity = Math.round(effectiveCapacity - totalAssigned)
+  const totalCarry = members.reduce((sum, m) => sum + (carryPoints[m.id] || 0), 0)
+  const remainingCapacity = Math.round(effectiveCapacity - totalAssigned - totalCarry)
+  const totalAvailForNew = members.reduce(
+    (sum, m) => sum + Math.max(0, (memberCapacities[m.id]?.targetSP || 0) - (carryPoints[m.id] || 0)),
+    0
+  )
 
   const sprintUtilPct = effectiveCapacity > 0 ? Math.round((totalAssigned / effectiveCapacity) * 100) : 0
   const sprintStatus = getSprintStatus(totalAssigned, effectiveCapacity)
@@ -370,9 +424,13 @@ export default function Dashboard() {
               sub={`${sprintUtilPct}% utilized`}
             />
             <CapacityCard
-              label="Remaining SP"
-              value={remainingCapacity}
-              sub="Available capacity"
+              label="Available for New Work"
+              value={totalAvailForNew}
+              valueColor={totalAvailForNew <= 0 ? '#FF4444' : null}
+              sub={totalAvailForNew <= 0
+                ? 'Team is over capacity from carryover'
+                : 'Across all members for Sprint B'
+              }
             />
           </div>
 
@@ -386,6 +444,7 @@ export default function Dashboard() {
               members={members}
               memberCapacities={memberCapacities}
               assignedPoints={assignedPoints}
+              carryPoints={carryPoints}
               basePoints={basePoints}
               focusFactor={focusFactor}
               onAssignedChange={handleAssignedChange}
